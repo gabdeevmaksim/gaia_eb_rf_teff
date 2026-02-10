@@ -21,6 +21,9 @@ __pycache__/
 venv/
 env/
 
+# Generated HTML (e.g. profile reports)
+*.html
+
 # Jupyter
 .ipynb_checkpoints/
 
