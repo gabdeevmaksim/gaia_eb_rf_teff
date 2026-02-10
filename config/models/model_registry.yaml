@@ -1,0 +1,95 @@
+# Model Registry for HuggingFace Hub
+#
+# This file defines all available pre-trained models with their metadata,
+# download URLs, and performance metrics.
+
+registry_url: "https://huggingface.co/Dedulek/gaia-eb-teff-models"
+
+models:
+  # Best overall model - Recommended for most use cases
+  gaia_teff_corrected_log:
+    file: "rf_gaia_teff_corrected_log_20251126_130144.pkl"
+    description: "Log-transformed Gaia colors with corrected Teff (best overall)"
+    url: "https://huggingface.co/Dedulek/gaia-eb-teff-models/resolve/main/rf_gaia_teff_corrected_log_20251126_130144.pkl"
+    checksum_sha256: ""  # TODO: Add checksum after uploading
+    size_mb: 1200
+    features:
+      - bp_rp
+      - g_rp
+      - g_bp
+      - bp_g
+      - rp_g
+      - bp
+      - rp
+      - g
+    target: "log10(teff_corrected)"
+    performance:
+      mae_kelvin: 556.9
+      rmse_kelvin: 1021.3
+      r2: 0.640
+      within_10_percent: 68.5
+    training_date: "2025-11-26"
+    n_estimators: 300
+    max_depth: 30
+
+  # Gaia + 2MASS infrared
+  gaia_2mass_ir:
+    file: "rf_gaia_2mass_ir_20251103_141119.pkl"
+    description: "Gaia optical + 2MASS infrared photometry"
+    url: "https://huggingface.co/Dedulek/gaia-eb-teff-models/resolve/main/rf_gaia_2mass_ir_20251103_141119.pkl"
+    checksum_sha256: ""  # TODO: Add checksum
+    size_mb: 1200
+    features:
+      - bp_rp
+      - j_k
+      - g_j
+      - rp_k
+      - bp_j
+    target: "teff"
+    performance:
+      mae_kelvin: 765.1
+      rmse_kelvin: 1168.4
+      r2: 0.315
+      within_10_percent: 43.4
+    training_date: "2025-11-03"
+
+  # Gaia all colors (log transformed)
+  gaia_all_colors_teff_log:
+    file: "rf_gaia_all_colors_teff_log_20251112_162857.pkl"
+    description: "All Gaia colors, log-transformed target"
+    url: "https://huggingface.co/Dedulek/gaia-eb-teff-models/resolve/main/rf_gaia_all_colors_teff_log_20251112_162857.pkl"
+    checksum_sha256: ""  # TODO: Add checksum
+    size_mb: 2000
+    features:
+      - bp_rp
+      - g_rp
+      - g_bp
+      - bp_g
+      - rp_g
+      - bp
+      - rp
+      - g
+    target: "log10(teff)"
+    performance:
+      mae_kelvin: 557
+      rmse_kelvin: 1021
+      r2: 0.640
+      within_10_percent: 68.5
+    training_date: "2025-11-12"
+
+# Add more models as needed
+#
+# Example template:
+#   model_name:
+#     file: "rf_model_name_timestamp.pkl"
+#     description: "Model description"
+#     url: "https://huggingface.co/Dedulek/gaia-eb-teff-models/resolve/main/rf_model_name_timestamp.pkl"
+#     checksum_sha256: "abc123..."
+#     size_mb: 1500
+#     features: [list, of, features]
+#     target: "target_variable"
+#     performance:
+#       mae_kelvin: 500
+#       rmse_kelvin: 900
+#       r2: 0.75
+#     training_date: "2025-01-01"

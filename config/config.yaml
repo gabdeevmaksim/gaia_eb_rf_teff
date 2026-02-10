@@ -1,0 +1,69 @@
+# Configuration for Eclipsing Binary Temperature Analysis Pipeline
+
+# Data paths (relative to project root)
+paths:
+  data_root: data
+  raw: data/raw
+  processed: data/processed
+  external: data/external
+  interim: data/interim
+  cache: data/cache
+  models: models
+  reports: reports
+  figures: reports/figures
+
+# Dataset filenames (keys used with get_dataset_path(key, location))
+# Input: from HF or upstream pipeline → data/raw
+# Output: produced by this repo → data/processed
+datasets:
+  # Input: unified photometry (download from HF to data/raw)
+  eb_unified_photometry: eb_unified_photometry.parquet
+  # Output: merge script writes this to data/processed
+  eb_catalog_teff: eb_catalog_teff.parquet
+
+# Data processing parameters
+processing:
+  # Missing value indicator
+  missing_value: -999.0
+
+  # Color constraints for temperature calculations
+  color_threshold: -0.5
+
+  # Photometric bands
+  panstarrs_bands: ['g', 'r', 'i', 'z', 'y']
+  magnitude_columns: ['gPSFMag', 'rPSFMag', 'iPSFMag', 'zPSFMag', 'yPSFMag']
+  error_columns: ['gPSFMagErr', 'rPSFMagErr', 'iPSFMagErr', 'zPSFMagErr', 'yPSFMagErr']
+
+# Machine learning parameters
+ml:
+  # Train/test split
+  test_size: 0.2
+  random_state: 42
+
+  # Random Forest parameters
+  rf_n_estimators: 300
+  rf_max_depth: 20
+  rf_min_samples_split: 5
+  rf_min_samples_leaf: 4
+  rf_max_features: log2
+  rf_n_jobs: 12
+
+# Temperature calculation coefficients
+# Empirical color-temperature relations
+temperature:
+  # Te = A / (color + B) * 10^4
+  gr_coefficients:
+    A: 1.09
+    B: 1.47
+  ri_coefficients:
+    A: 0.5
+    B: 0.78
+  iz_coefficients:
+    A: 0.38
+    B: 0.64
+
+# Logging configuration
+logging:
+  level: INFO
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  date_format: '%Y-%m-%d %H:%M:%S'

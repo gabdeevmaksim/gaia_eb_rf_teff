@@ -1,0 +1,39 @@
+# Template Validation Configuration
+# Copy this file and customize for your model
+
+model:
+  # Model pattern to validate (wildcards supported)
+  # Examples:
+  #   - Exact: "rf_my_model_20251212_123456"
+  #   - Wildcard: "rf_my_model_*" (uses most recent)
+  model_pattern: "rf_YOUR_MODEL_NAME_*"
+
+plots:
+  # Which validation plots to generate
+  test_scatter: true          # Scatter plot: predicted vs actual
+  residuals: true              # Residual plot: errors vs predicted
+  performance_by_temp: true    # Performance metrics by temperature bins
+  temp_distributions: true     # Distribution comparison (predicted vs actual)
+  feature_importance: true     # Feature importance bar chart
+
+output:
+  # Subdirectory for figures (under reports/figures/)
+  figures_subdir: "YOUR_MODEL_validation"
+
+  # Report file (text summary of metrics)
+  report_file: "reports/validation_report_YOUR_MODEL.txt"
+
+# Target information (customize for your target variable)
+target_info:
+  name: "Temperature"      # Full name for plot labels
+  unit: "K"                # Unit for axis labels
+  short: "Teff"            # Short name for filenames
+
+# Optional: Temperature ranges for performance analysis
+# If not specified, uses automatic binning
+# temp_ranges:
+#   - [0, 4000]
+#   - [4000, 5000]
+#   - [5000, 6000]
+#   - [6000, 8000]
+#   - [8000, 50000]

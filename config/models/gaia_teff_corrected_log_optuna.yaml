@@ -1,0 +1,79 @@
+model:
+  name: Gaia Teff (Corrected, Log-transformed, Optuna-optimized)
+  id_prefix: rf_gaia_teff_corrected_log_optuna
+  description: Temperature prediction using Gaia colors with polynomial correction
+    for hot stars, log-transformed target, and Optuna hyperparameter optimization
+
+teff_correction:
+  enabled: true
+  target_column: teff_gaia
+  threshold: 10000
+  coefficients_file: teff_correction_coeffs_deg2.pkl
+
+target_transform: log
+
+data:
+  source_file: eb_unified_photometry.parquet
+  source_format: parquet
+  source_location: raw
+  target: teff_gaia_corrected
+  features:
+  - g
+  - bp
+  - rp
+  - bp_rp
+  - g_bp
+  - g_rp
+
+  id_column: source_id
+
+preprocessing:
+  missing_value: -999.0
+
+  drop_missing: true
+
+training:
+  test_size: 0.2
+  random_state: 42
+optuna_optimization:
+  enabled: true
+  n_trials: 150
+  timeout: null
+  search_space:
+    n_estimators: [200, 500, 50]
+    max_depth: [15, 25]
+    min_samples_split: [3, 10]
+    min_samples_leaf: [2, 8]
+    max_features: [sqrt, log2]
+
+hyperparameters: &id001
+  n_estimators: 400
+  max_depth: 18
+  min_samples_split: 13
+  min_samples_leaf: 10
+  max_features: sqrt
+  random_state: 42
+  n_jobs: -1
+  verbose: 0
+feature_engineering:
+  enabled: false
+clustering:
+  enabled: false
+output:
+  save_model: true
+  save_predictions: true
+  save_test_predictions: true
+  models_dir: models
+  predictions_dir: data/predictions
+validation:
+  create_plots: true
+  n_temp_bins: 5
+  target_info:
+    name: Temperature
+    unit: K
+    short: Teff
+hyperparameter_cache:
+  c8aae5c9a6226562:
+    hyperparameters: *id001
+    optimized_at: '2026-01-26T20:39:14.353177'
+    n_trials: 50

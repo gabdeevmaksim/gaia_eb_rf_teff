@@ -1,0 +1,47 @@
+# Dockerfile for Gaia EB Teff Training
+# Full environment for model training and validation (~1.5GB)
+
+FROM python:3.11-slim-bullseye
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    gfortran \
+    libopenblas-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy and install full Python dependencies (includes matplotlib, seaborn)
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code and configs
+COPY src/ ./src/
+COPY config/ ./config/
+COPY pipeline.py .
+COPY scripts/ ./scripts/
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Create required directories
+RUN mkdir -p data/{raw,processed,external,interim,cache} \
+    models/ \
+    reports/figures/
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1 \
+    HF_HOME=/app/.cache/huggingface \
+    KAGGLE_CONFIG_DIR=/app/.kaggle \
+    MODEL_CACHE_DIR=/app/models \
+    DATA_CACHE_DIR=/app/data/processed
+
+# Training entry point
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["--help"]

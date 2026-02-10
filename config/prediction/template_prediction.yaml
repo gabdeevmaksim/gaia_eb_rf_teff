@@ -1,0 +1,88 @@
+# Template Prediction Configuration
+# Copy this file and customize for your use case
+
+model:
+  # Trained model file (wildcards supported)
+  # Examples:
+  #   - Exact: "rf_my_model_20251212_123456.pkl"
+  #   - Wildcard: "rf_my_model_*.pkl" (uses most recent)
+  model_file: "YOUR_MODEL_NAME.pkl"
+
+data:
+  # Source dataset for predictions
+  source_file: "eb_unified_photometry.parquet"
+  source_location: raw  # use "processed" for files in data/processed
+
+  # ID column for output
+  id_column: "source_id"
+
+  # Optional: Filter data before prediction
+  # Examples:
+  #   - Only objects without Teff: {teff_gaia: -999.0}
+  #   - Temperature range: {teff_gaia: [5000, 7000]}
+  #   - Multiple filters: {teff_gaia: -999.0, logg_gaia: -999.0}
+  filters: {}
+
+preprocessing:
+  # Filter out objects with missing photometry
+  filter_missing: true
+  missing_value: -999.0
+
+  # Required features (must match training features)
+  # List all photometry columns your model needs
+  required_features:
+    - "g"
+    - "bp"
+    - "rp"
+    - "bp_rp"
+    - "g_rp"
+    - "g_bp"
+    # Add Pan-STARRS if used:
+    # - "ps_gPSFMag"
+    # - "ps_rPSFMag"
+    # - "ps_g_r_color"
+    # Add 2MASS if used:
+    # - "j_m"
+    # - "h_m"
+    # - "k_m"
+
+feature_engineering:
+  # MUST match training configuration exactly!
+  enabled: false  # Set to true if model used feature engineering
+
+  # If enabled, specify same settings as training:
+  # color_cols:
+  #   - "bp_rp"
+  #   - "g_rp"
+  # mag_cols:
+  #   - "g"
+  # polynomial_degree: 2
+  # interactions: true
+
+# Target transformation (if model used log/log2/ln transform)
+# Leave commented if model didn't use transformation
+# target_transform:
+#   type: "log10"
+#   inverse: true
+
+# Uncertainty calculation
+uncertainty:
+  enabled: true
+  method: "full_tree"      # Options: "full_tree" (accurate) or "fast" (approximate)
+  n_sample_trees: null     # null = use all trees (for full_tree method)
+
+output:
+  # Output file for predictions
+  output_file: "predictions_YOUR_MODEL.parquet"
+
+  # Columns to include in output (in addition to predictions)
+  include_columns:
+    - "source_id"
+    - "ra"
+    - "dec"
+    - "g"
+    - "bp_rp"
+    # Add any other columns you want in output
+
+  # Save summary statistics
+  save_summary: true

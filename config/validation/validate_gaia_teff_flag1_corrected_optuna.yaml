@@ -1,0 +1,29 @@
+# Validation configuration for Gaia → Teff (Corrected, Optuna, GSP-Phot flag=1)
+# Run: python pipeline.py validate --config config/validation/validate_gaia_teff_flag1_corrected_optuna.yaml
+
+model:
+  model_pattern: "rf_gaia_teff_flag1_corrected_optuna_*"
+
+plots:
+  test_scatter: true
+  residuals: true
+  performance_by_temp: true
+  temp_distributions: true
+  feature_importance: true
+  color_temp_relations: true
+  color_columns:
+    - column: bp_rp
+      label: "BP - RP"
+    - column: g_bp
+      label: "G - BP"
+    - column: g_rp
+      label: "G - RP"
+
+output:
+  figures_subdir: "gaia_teff_flag1_corrected_optuna_validation"
+  report_file: "reports/validation_report_gaia_teff_flag1_corrected_optuna.txt"
+
+target_info:
+  name: "Temperature"
+  unit: "K"
+  short: "Teff"

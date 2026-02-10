@@ -1,0 +1,95 @@
+# ============================================================================
+# Gaia colours → Teff with Optuna (GSP-Phot flag = 1 only)
+# ============================================================================
+# Trains only on sources with teff_gspphot_flag = 1 (high-quality GSP-Phot Teff).
+#
+# NOTE: eb_unified_photometry.parquet does NOT contain teff_gspphot_flag.
+# This filter is skipped until the column is added (e.g. from Gaia archive
+# astrophysical_parameters or an external GSP-Phot quality-flag dataset).
+# See docs/GSP_PHOT_FLAGS.md for how to add the flag column.
+# ============================================================================
+
+model:
+  name: Gaia → Teff (Corrected, Optuna, GSP-Phot flag=1)
+  id_prefix: rf_gaia_teff_flag1_corrected_optuna
+  description: Temperature prediction using Gaia colors; polynomial
+    correction for hot stars, Optuna optimization.
+    Training data restricted to GSP-Phot Teff with quality flag = 1.
+
+teff_correction:
+  enabled: true
+  target_column: teff_gaia
+  threshold: 10000
+  coefficients_file: teff_correction_coeffs_deg2.pkl
+
+target_transform: log
+
+data:
+  source_file: eb_unified_photometry.parquet
+  source_format: parquet
+  source_location: raw
+  target: teff_gaia
+  features:
+    - g
+    - bp
+    - rp
+    - bp_rp
+    - g_bp
+    - g_rp
+  id_column: source_id
+
+preprocessing:
+  missing_value: -999.0
+  filters:
+    teff_gaia: [2500, 50000]
+    teff_gspphot_flag: [1, 1]   # Only high-quality GSP-Phot Teff (flag = 1)
+  drop_missing: true
+
+training:
+  test_size: 0.2
+  random_state: 42
+
+optuna_optimization:
+  enabled: true
+  n_trials: 150
+  timeout: null
+  max_samples: null   # Reduce RAM use in Docker; null for full data
+  stop_if_no_improvement_for: 15   # Stop after this many trials without improving best; null to disable
+  # Optional: restrict search to a region (omit to use pipeline defaults: wide search)
+  search_space:
+    n_estimators: [200, 500, 50]   # [low, high, step]; step optional (default 50 for n_estimators)
+    max_depth: [15, 25]
+    min_samples_split: [3, 10]
+    min_samples_leaf: [2, 8]
+    max_features: [sqrt, log2]     # categorical: list options (sqrt, log2, or null for "all features")
+
+hyperparameters:
+  n_estimators: 300
+  max_depth: 20
+  min_samples_split: 5
+  min_samples_leaf: 2
+  max_features: sqrt
+  random_state: 42
+  n_jobs: -1
+  verbose: 0
+
+feature_engineering:
+  enabled: false
+
+clustering:
+  enabled: false
+
+output:
+  save_model: true
+  save_predictions: true
+  save_test_predictions: true
+  models_dir: models
+  predictions_dir: data/predictions
+
+validation:
+  create_plots: true
+  n_temp_bins: 5
+  target_info:
+    name: Temperature
+    unit: K
+    short: Teff

@@ -1,0 +1,52 @@
+# Prediction: Gaia Teff (Corrected, Clustering, Optuna)
+# Uses clustering features; predictions are log10(Teff) → converted to Teff [K].
+
+model:
+  model_file: "rf_gaia_teff_corrected_clustering_optuna_20260202_192405.pkl"
+
+data:
+  source_file: "eb_unified_photometry.parquet"
+  source_location: raw
+  id_column: "source_id"
+  filters: 
+    teff_gaia_lt: 0.1  # Only predict for objects WITHOUT Gaia Teff (< 0.1 K)
+
+preprocessing:
+  filter_missing: true
+  missing_value: -999.0
+  required_features:
+    - "g"
+    - "bp"
+    - "rp"
+    - "bp_rp"
+    - "g_bp"
+    - "g_rp"
+
+feature_engineering:
+  enabled: false
+
+clustering:
+  enabled: true
+  method: kmeans
+  features:
+    - "g"
+    - "bp"
+    - "rp"
+    - "bp_rp"
+    - "g_bp"
+    - "g_rp"
+
+target_transform:
+  type: "log10"
+  inverse: true
+
+uncertainty:
+  enabled: true
+  method: "full_tree"
+  n_sample_trees: null
+
+output:
+  output_file: "predictions_gaia_teff_corrected_clustering_optuna.parquet"
+  include_columns:
+    - "source_id"
+  save_summary: true

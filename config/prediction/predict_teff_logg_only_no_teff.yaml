@@ -1,0 +1,47 @@
+# Prediction: Gaia colours + logg → Teff, only for objects that do NOT have teff
+# Uses the enriched dataset (with logg) and filters to rows where teff_gaia is missing.
+# Run enrich_dataset_with_logg_predictions.py first to create the input file.
+
+model:
+  model_file: "rf_gaia_logg_teff_corrected_log_optuna_*.pkl"
+
+data:
+  source_file: "eb_unified_photometry_with_logg.parquet"
+  id_column: "source_id"
+  # Only objects without teff (missing value -999.0; if your data uses NaN use teff_gaia_is_null: true)
+  filters:
+    teff_gaia: -999.0
+
+preprocessing:
+  filter_missing: true
+  missing_value: -999.0
+  required_features:
+    - "g"
+    - "bp"
+    - "rp"
+    - "bp_rp"
+    - "g_bp"
+    - "g_rp"
+    - "logg_predicted"
+
+feature_engineering:
+  enabled: false
+
+# Model predicts log10(Teff); convert to Kelvin
+target_transform:
+  type: "log10"
+  inverse: true
+
+uncertainty:
+  enabled: true
+  method: "full_tree"
+  n_sample_trees: null
+
+output:
+  output_file: "predictions_teff_logg_only_no_teff.parquet"
+  include_columns:
+    - "source_id"
+    - "logg_gaia"
+    - "logg_predicted"
+    - "logg_uncertainty"
+  save_summary: true

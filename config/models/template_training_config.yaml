@@ -1,0 +1,268 @@
+# ============================================================================
+# COMPREHENSIVE MODEL TRAINING CONFIGURATION TEMPLATE
+# ============================================================================
+# This template includes ALL possible configuration options for the
+# ConfigurableMLPipeline. Copy this file and customize for your model.
+#
+# Usage:
+#   python pipeline.py --ml-config config/models/your_model.yaml
+# ============================================================================
+
+# ============================================================================
+# MODEL METADATA
+# ============================================================================
+model:
+  name: "Your Model Name"                    # Display name for the model
+  id_prefix: "rf_your_model"                  # Prefix for model ID (e.g., rf_your_model_20250126_120000)
+  description: "Description of what this model does and what it predicts"
+
+# ============================================================================
+# TEFF CORRECTION (Optional)
+# ============================================================================
+# Applies polynomial correction to stars above threshold temperature
+# Creates a new column: {target_column}_corrected
+teff_correction:
+  enabled: false                              # Enable/disable Teff correction
+  target_column: "teff_gaia"                  # Original Teff column to correct
+  threshold: 10000                            # Apply correction for Teff > threshold (K)
+  coefficients_file: "teff_correction_coeffs_deg2.pkl"  # Polynomial coefficients file
+  # Note: After correction, use the corrected column as your target
+
+# ============================================================================
+# TARGET TRANSFORMATION
+# ============================================================================
+# Transform target variable before training (applied to both train and test)
+# Options: none, log, log2, ln
+# - none: No transformation
+# - log: log10(y) - common for temperature
+# - log2: log2(y)
+# - ln: natural log (e^y)
+target_transform: "none"                      # Options: none, log, log2, ln
+
+# ============================================================================
+# DATA CONFIGURATION
+# ============================================================================
+data:
+  # Source file (required)
+  source_file: "your_dataset.parquet"         # Dataset filename
+  
+  # Source location (optional, default: processed)
+  # Options: raw, processed, external, interim
+  source_location: "processed"               # Where to find source_file
+  
+  # Source format (optional, auto-detected from extension)
+  # Options: parquet, csv, fits
+  source_format: "parquet"                   # File format (auto-detected if not specified)
+  
+  # Target variable (required)
+  target: "teff_gaia"                         # Column name for target variable
+  # If teff_correction is enabled, use the corrected column: "{target_column}_corrected"
+  
+  # Features (required - list of column names)
+  # If empty list [], all columns except target and exclude_columns will be used
+  features:
+    - "bp_rp"                                 # BP-RP color
+    - "g_bp"                                  # G-BP color
+    - "g_rp"                                  # G-RP color
+    # Add more feature columns here
+  
+  # Exclude columns (optional)
+  # Columns to exclude when auto-detecting features (if features list is empty)
+  exclude_columns:
+    - "source_id"                             # ID columns
+    - "ra"                                    # Coordinate columns
+    - "dec"
+    # Add columns to exclude here
+  
+  # ID column (optional, for tracking predictions)
+  id_column: "source_id"                      # Column with unique identifiers
+
+# ============================================================================
+# PREPROCESSING
+# ============================================================================
+preprocessing:
+  # Missing value indicator
+  missing_value: -999.0                       # Value representing missing data
+  
+  # Value filters (optional)
+  # Filter rows based on column value ranges: [min_value, max_value]
+  filters:
+    teff_gaia: [2500, 50000]                  # Temperature range (K)
+    bp_rp: [-0.5, 6.0]                        # Color range
+    teff_gspphot_flag: [1, 1]                 # ONLY high-quality flag 1 sources
+    # Add more filters: column_name: [min, max]
+  
+  # Drop missing values (optional, default: true)
+  drop_missing: true                          # Drop rows with missing values in target/features
+  
+  # Sample weights (optional)
+  use_sample_weights: false                   # Enable sample weights for training
+  weight_column: "sample_weight"              # Column name with sample weights
+
+# ============================================================================
+# FEATURE ENGINEERING (Optional)
+# ============================================================================
+feature_engineering:
+  enabled: false                              # Enable/disable feature engineering
+  
+  # Color columns for feature engineering
+  color_cols:                                 # Columns to create polynomial/interaction features from
+    - "bp_rp"
+    - "g_bp"
+    - "g_rp"
+  
+  # Magnitude columns for feature engineering
+  mag_cols:                                   # Magnitude columns for magnitude-based features
+    - "g"
+    - "bp"
+    - "rp"
+  
+  # Feature engineering options (when enabled)
+  include_polynomials: true                   # Create polynomial features (x^2, x^3, etc.)
+  include_interactions: true                  # Create interaction features (x1 * x2)
+  include_log: true                           # Create log features (log(x))
+  include_temp_dependent: true                 # Create temperature-dependent features
+  include_mag_features: true                   # Create magnitude-based features
+  
+  # Custom features (optional)
+  # Add custom features using pandas eval expressions
+  custom_features:
+    # feature_name: "expression"
+    # Example: custom_ratio: "bp_rp / g_bp"
+    # Example: custom_sum: "bp_rp + g_bp"
+
+# ============================================================================
+# TRAINING CONFIGURATION
+# ============================================================================
+training:
+  test_size: 0.2                              # Fraction of data for test set (0.0-1.0)
+  random_state: 42                             # Random seed for reproducibility
+
+# ============================================================================
+# OPTUNA HYPERPARAMETER OPTIMIZATION (Optional)
+# ============================================================================
+# Automatically finds best hyperparameters and caches them for reuse
+optuna_optimization:
+  enabled: false                               # Enable Optuna optimization
+  n_trials: 50                                 # Number of optimization trials
+  timeout: null                                # Max time in seconds (null = no limit)
+  
+  # Optional: restrict search to a specific hyperparameter region (omit for full default ranges)
+  # search_space:
+  #   n_estimators: [200, 500, 50]              # [low, high] or [low, high, step]; default step 50
+  #   max_depth: [15, 25]                      # [low, high]; default step 1
+  #   min_samples_split: [3, 10]
+  #   min_samples_leaf: [2, 8]
+  #   max_features: [sqrt, log2]                # categorical: list of choices (sqrt, log2, null)
+  
+  # How it works:
+  # 1. Generates a unique signature based on data source, features, and settings (including search_space)
+  # 2. Checks if hyperparameters already exist for this signature in hyperparameter_cache
+  # 3. If found, uses cached hyperparameters (skips optimization)
+  # 4. If not found, runs Optuna optimization and saves results to config file
+  # 5. Subsequent runs with same settings will use cached hyperparameters automatically
+
+# ============================================================================
+# HYPERPARAMETERS
+# ============================================================================
+# Random Forest hyperparameters
+# If optuna_optimization.enabled = true, these will be updated by Optuna
+# If optuna_optimization.enabled = false, these values will be used directly
+hyperparameters:
+  n_estimators: 300                            # Number of trees in the forest
+  max_depth: 20                                # Maximum depth of trees (null = unlimited)
+  min_samples_split: 5                          # Minimum samples required to split a node
+  min_samples_leaf: 2                           # Minimum samples required at a leaf node
+  max_features: "sqrt"                          # Number of features for best split
+                                                 # Options: "sqrt", "log2", int, float, null
+  random_state: 42                              # Random seed (should match training.random_state)
+  n_jobs: -1                                    # Number of parallel jobs (-1 = all cores)
+
+# ============================================================================
+# CLUSTERING FEATURES (Optional)
+# ============================================================================
+# Add cluster membership probabilities as features
+clustering:
+  enabled: false                               # Enable/disable clustering features
+  
+  # Clustering method
+  # Options: gmm, bayesian_gmm, kmeans
+  method: "gmm"                                # Clustering algorithm
+  
+  # Number of clusters
+  n_clusters: 5                                # Number of clusters/components
+  
+  # GMM/Bayesian GMM specific options
+  covariance_type: "full"                       # Options: full, tied, diag, spherical
+  n_init: 10                                    # Number of initializations
+  max_iter: 200                                 # Maximum iterations
+  reg_covar: 1e-6                               # Regularization for covariance
+  
+  # Bayesian GMM specific
+  weight_prior: "dirichlet_process"            # Weight concentration prior type
+  
+  # KMeans specific
+  # (uses same n_init and max_iter as above)
+
+# ============================================================================
+# OUTPUT CONFIGURATION
+# ============================================================================
+output:
+  save_model: true                             # Save trained model (.pkl file)
+  save_predictions: true                       # Save predictions
+  save_test_predictions: true                  # Save test set predictions
+  models_dir: "models"                         # Directory to save models
+  predictions_dir: "data/predictions"          # Directory to save predictions
+
+# ============================================================================
+# VALIDATION/PLOTTING (Optional)
+# ============================================================================
+validation:
+  create_plots: true                           # Generate validation plots
+  n_temp_bins: 5                               # Number of temperature bins for analysis
+  target_info:
+    name: "Temperature"                        # Display name for target
+    unit: "K"                                  # Unit of target variable
+    short: "Teff"                              # Short name for plots
+
+# ============================================================================
+# HYPERPARAMETER CACHE (Auto-generated)
+# ============================================================================
+# This section is automatically populated by Optuna optimization
+# Do not edit manually - it stores optimized hyperparameters for reuse
+hyperparameter_cache:
+  # Example structure (auto-generated):
+  # "abc123def456":  # Model signature hash
+  #   hyperparameters:
+  #     n_estimators: 450
+  #     max_depth: 25
+  #     ...
+  #   optimized_at: "2026-01-26T10:30:00"
+  #   n_trials: 50
+
+# ============================================================================
+# PIPELINE EXECUTION ORDER
+# ============================================================================
+# The pipeline executes in this order:
+# 1. Load Model Configuration (this file)
+# 2. Load Training Data (from data.source_file)
+# 3. Apply Teff Correction (if enabled, creates corrected column)
+# 4. Preprocess Data (filters, missing values)
+# 5. Engineer Features (if enabled, creates polynomial/interaction features)
+# 6. Prepare Train/Test Split (with target transformation if specified)
+# 7. Add Clustering Features (if enabled, adds cluster probabilities)
+# 8. Optimize Hyperparameters (if enabled, runs Optuna)
+# 9. Train Model (Random Forest with optimized/default hyperparameters)
+# 10. Evaluate Model (calculates metrics on train and test sets)
+# 11. Save Model (saves model, metadata, predictions, and plots)
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# - All paths are relative to project root
+# - Missing value indicator (-999.0) is automatically replaced with NaN
+# - Target transformation is applied before training and reversed for evaluation
+# - Sample weights are used if use_sample_weights = true and weight_column exists
+# - Feature engineering creates many new features - use with caution on large datasets
+# - Clustering features add n_clusters new features (cluster probabilities)
+# - Optuna optimization can take a long time - cached results are reused automatically

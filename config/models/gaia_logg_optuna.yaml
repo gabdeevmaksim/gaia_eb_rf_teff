@@ -1,0 +1,86 @@
+# ============================================================================
+# Gaia colors → logg (surface gravity) with Optuna hyperparameter optimization
+# ============================================================================
+# Predicts logg (dex) from Gaia photometry. Use this model to fill missing logg
+# for objects that have Gaia colors but no logg_gaia. Output can be merged into
+# the dataset for downstream Teff models that use logg as a feature.
+# ============================================================================
+
+model:
+  name: Gaia → logg (Optuna-optimized)
+  id_prefix: rf_gaia_logg_optuna
+  description: Surface gravity (logg) prediction using Gaia colors and Optuna
+    hyperparameter optimization
+
+teff_correction:
+  enabled: false   # Not applicable for logg target
+
+target_transform: none   # logg already in dex; use as-is
+
+data:
+  source_file: eb_unified_photometry.parquet
+  source_format: parquet
+  source_location: raw
+  target: logg_gaia
+  features:
+    - g
+    - bp
+    - rp
+    - bp_rp
+    - g_bp
+    - g_rp
+  id_column: source_id
+
+preprocessing:
+  missing_value: -999.0
+  filters:
+    logg_gaia: [0.0, 6.0]   # Physical range (dex); excludes missing
+  drop_missing: true
+
+training:
+  test_size: 0.2
+  random_state: 42
+
+optuna_optimization:
+  enabled: true
+  n_trials: 150
+  timeout: null
+  max_samples: null   # Or set e.g. 200000 to reduce RAM in Docker
+  stop_if_no_improvement_for: 13   # null to disable
+  search_space:
+    n_estimators: [200, 500, 10]
+    max_depth: [15, 25]
+    min_samples_split: [3, 10]
+    min_samples_leaf: [2, 8]
+    max_features: [sqrt, log2]
+
+hyperparameters:
+  n_estimators: 300
+  max_depth: 20
+  min_samples_split: 5
+  min_samples_leaf: 2
+  max_features: sqrt
+  random_state: 42
+  n_jobs: -1
+  verbose: 0
+
+feature_engineering:
+  enabled: false
+
+clustering:
+  enabled: false
+
+output:
+  save_model: true
+  save_predictions: true
+  save_test_predictions: true
+  models_dir: models
+  predictions_dir: data/predictions
+
+validation:
+  create_plots: true
+  n_temp_bins: 5   # Bins for validation (used for target bins)
+  target_info:
+    name: Surface gravity
+    unit: dex
+    short: logg

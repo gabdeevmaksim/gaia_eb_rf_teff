@@ -1,0 +1,63 @@
+# Exclude from Docker build context
+
+# Development files
+notebooks/
+examples/
+paper/
+
+# Data (will be mounted as volumes)
+data/
+models/
+reports/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation (keep docs/ in image, but exclude these)
+*.md
+!README.md
+!DOCKER_USAGE.md
+!DATASET_ACCESS.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Claude
+.claude/
+
+# Other
+.env
+*.log

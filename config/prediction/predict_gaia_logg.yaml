@@ -1,0 +1,40 @@
+# Prediction Configuration: Gaia colors → logg
+# Uses the trained logg model (rf_gaia_logg_optuna) to predict surface gravity.
+
+model:
+  # Use latest logg model (or set exact file e.g. rf_gaia_logg_optuna_*.pkl)
+  model_file: "rf_gaia_logg_optuna_20260202_121918.pkl"
+
+data:
+  source_file: "eb_unified_photometry.parquet"
+  source_location: raw
+  id_column: "source_id"
+  filters: {logg_gaia: -999.0}   # Predict for all; or e.g. {logg_gaia: -999.0} to predict only where logg missing
+
+preprocessing:
+  filter_missing: true
+  missing_value: -999.0
+  required_features:
+    - "g"
+    - "bp"
+    - "rp"
+    - "bp_rp"
+    - "g_bp"
+    - "g_rp"
+
+feature_engineering:
+  enabled: false
+
+# No target_transform (logg is already in dex; model predicts logg directly)
+
+uncertainty:
+  enabled: true
+  method: "full_tree"
+  n_sample_trees: null
+
+output:
+  output_file: "predictions_gaia_logg.parquet"
+  include_columns:
+    - "source_id"
+    - "logg_gaia"   # Include if present (to compare predicted vs original)
+  save_summary: true

@@ -1,0 +1,42 @@
+# Prediction: Gaia Teff (Corrected, Optuna, GSP-Phot flag=1)
+# For objects that ORIGINALLY HAD Gaia Teff (validation / comparison).
+# Same model as flag1; predicts only where teff_gaia is valid (> 0.1 K).
+
+model:
+  model_file: "rf_gaia_teff_flag1_corrected_optuna_*.pkl"
+
+data:
+  source_file: "eb_unified_photometry.parquet"
+  source_location: raw
+  id_column: "source_id"
+  filters:
+    teff_gaia_gt: 0.1  # Only predict for objects WITH original Gaia Teff (> 0.1 K)
+
+preprocessing:
+  filter_missing: true
+  missing_value: -999.0
+  required_features:
+    - "g"
+    - "bp"
+    - "rp"
+    - "bp_rp"
+    - "g_bp"
+    - "g_rp"
+
+feature_engineering:
+  enabled: false
+
+target_transform:
+  type: "log10"
+  inverse: true
+
+uncertainty:
+  enabled: true
+  method: "full_tree"
+  n_sample_trees: null
+
+output:
+  output_file: "predictions_gaia_original_teff_flag1_corrected_optuna.parquet"
+  include_columns:
+    - "source_id"
+  save_summary: true

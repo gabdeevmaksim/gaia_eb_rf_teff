@@ -1,0 +1,32 @@
+# Data and trained models (large or generated)
+data/
+!data/.gitkeep
+/models/
+!models/.gitkeep
+reports/
+
+# Optional / local
+notebooks/
+examples/
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
