@@ -1,9 +1,10 @@
-# Data and trained models (large or generated)
+# Data (large or generated)
 data/
 !data/.gitkeep
-/models/
-!models/.gitkeep
-reports/
+
+# Models: track description files (*_metadata.json, *_SUMMARY.txt); ignore binaries
+/models/*.pkl
+/models/*.parquet
 
 # Optional / local
 notebooks/

@@ -1,0 +1,31 @@
+Model: Gaia Teff (Corrected, Log-transformed, Optuna-optimized)
+================================================================================
+
+Model ID: rf_gaia_teff_corrected_log_optuna_20260203_150044
+Timestamp: 20260203_150044
+Description: Temperature prediction using Gaia colors with polynomial correction for hot stars, log-transformed target, and Optuna hyperparameter optimization
+
+Data Source: eb_unified_photometry.parquet
+Target: teff_gaia_corrected
+Target Transform: log
+Features: 6
+
+TRAIN SET PERFORMANCE:
+  MAE:  554.8 K
+  RMSE: 1123.1 K
+  R²:   0.6858
+  Within 10%: 69.7%
+
+TEST SET PERFORMANCE:
+  MAE:  585.0 K
+  RMSE: 1173.6 K
+  R²:   0.6520
+  Within 10%: 68.1%
+
+TOP 10 FEATURES:
+   1. bp                             0.2291
+   2. bp_rp                          0.2248
+   3. g                              0.1776
+   4. g_rp                           0.1592
+   5. g_bp                           0.1205
+   6. rp                             0.0888

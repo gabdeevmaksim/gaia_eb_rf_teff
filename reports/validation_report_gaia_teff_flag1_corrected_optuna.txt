@@ -1,0 +1,50 @@
+Validation Report: Gaia → Teff (Corrected, Optuna, GSP-Phot flag=1)
+================================================================================
+
+Model ID: rf_gaia_teff_flag1_corrected_optuna_20260130_131419
+Model File: /Users/wera/Max_astro/Slovakia/gaia_eb_rf_teff/models/rf_gaia_teff_flag1_corrected_optuna_20260130_131419.pkl
+Validation Date: 2026-01-30 15:04:20
+
+Test Set: 142,334 samples
+
+OVERALL PERFORMANCE:
+  MAE:  191.5648 K
+  RMSE: 282.8773 K
+  R²:   0.9069
+  Mean Relative Error: 4.01%
+
+ACCURACY THRESHOLDS:
+  Within  5%: 71.0%
+  Within 10%: 90.8%
+  Within 20%: 99.6%
+
+PERFORMANCE BY TEMPERATURE RANGE:
+
+  [0.00 - 4000.00] K (n=15,927):
+    MAE:  237.1286 K
+    RMSE: 303.2919 K
+    R²:   -2.7990
+
+  [4000.00 - 5000.00] K (n=71,609):
+    MAE:  173.3481 K
+    RMSE: 236.2042 K
+    R²:   0.2626
+
+  [5000.00 - 6000.00] K (n=45,784):
+    MAE:  188.2832 K
+    RMSE: 274.2038 K
+    R²:   -0.0091
+
+  [6000.00 - 8000.00] K (n=7,749):
+    MAE:  228.1003 K
+    RMSE: 384.7337 K
+    R²:   0.1095
+
+  [8000.00 - 50000.00] K (n=1,265):
+    MAE:  544.0683 K
+    RMSE: 1029.1408 K
+    R²:   0.8779
+
+VALIDATION PLOTS:
+  Location: reports/figures/gaia_teff_flag1_corrected_optuna_validation/
+  Number of plots: 8

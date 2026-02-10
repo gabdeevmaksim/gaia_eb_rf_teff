@@ -1,0 +1,364 @@
+======================================================================
+Optuna Hyperparameter Optimization Report
+======================================================================
+Model id_prefix: rf_gaia_logg_teff_corrected_log_optuna
+Signature: 94c0f16ee21506ef
+Status: COMPLETED
+Trials run: 49
+Best trial: #33
+Best MAE (validation): 0.0353
+
+Best hyperparameters:
+----------------------------------------
+  n_estimators: 1000
+  max_depth: 22
+  min_samples_split: 4
+  min_samples_leaf: 9
+  max_features: None
+
+All trials (trial_number, value, duration_sec, params):
+----------------------------------------
+  Trial 0: MAE=0.0378  duration=186.5s
+      n_estimators=900
+      max_depth=10
+      min_samples_split=2
+      min_samples_leaf=2
+      max_features=sqrt
+
+  Trial 1: MAE=0.0368  duration=327.0s
+      n_estimators=500
+      max_depth=11
+      min_samples_split=11
+      min_samples_leaf=6
+      max_features=None
+
+  Trial 2: MAE=0.0358  duration=210.2s
+      n_estimators=650
+      max_depth=23
+      min_samples_split=11
+      min_samples_leaf=3
+      max_features=log2
+
+  Trial 3: MAE=0.0354  duration=274.9s
+      n_estimators=300
+      max_depth=37
+      min_samples_split=2
+      min_samples_leaf=9
+      max_features=None
+
+  Trial 4: MAE=0.0358  duration=363.4s
+      n_estimators=900
+      max_depth=39
+      min_samples_split=10
+      min_samples_leaf=5
+      max_features=sqrt
+
+  Trial 5: MAE=0.0379  duration=888.4s
+      n_estimators=900
+      max_depth=9
+      min_samples_split=5
+      min_samples_leaf=1
+      max_features=None
+
+  Trial 6: MAE=0.0397  duration=79.7s
+      n_estimators=100
+      max_depth=7
+      min_samples_split=12
+      min_samples_leaf=3
+      max_features=None
+
+  Trial 7: MAE=0.0357  duration=526.0s
+      n_estimators=400
+      max_depth=15
+      min_samples_split=19
+      min_samples_leaf=9
+      max_features=None
+
+  Trial 8: MAE=0.0358  duration=533.1s
+      n_estimators=900
+      max_depth=42
+      min_samples_split=3
+      min_samples_leaf=5
+      max_features=log2
+
+  Trial 9: MAE=0.0358  duration=218.2s
+      n_estimators=400
+      max_depth=33
+      min_samples_split=4
+      min_samples_leaf=8
+      max_features=log2
+
+  Trial 10: MAE=0.0354  duration=149.9s
+      n_estimators=100
+      max_depth=49
+      min_samples_split=20
+      min_samples_leaf=10
+      max_features=None
+
+  Trial 11: MAE=0.0354  duration=150.9s
+      n_estimators=100
+      max_depth=44
+      min_samples_split=20
+      min_samples_leaf=10
+      max_features=None
+
+  Trial 12: MAE=0.0354  duration=371.6s
+      n_estimators=250
+      max_depth=50
+      min_samples_split=16
+      min_samples_leaf=8
+      max_features=None
+
+  Trial 13: MAE=0.0354  duration=249.7s
+      n_estimators=250
+      max_depth=30
+      min_samples_split=7
+      min_samples_leaf=10
+      max_features=None
+
+  Trial 14: MAE=0.0354  duration=267.3s
+      n_estimators=300
+      max_depth=27
+      min_samples_split=7
+      min_samples_leaf=7
+      max_features=None
+
+  Trial 15: MAE=0.0358  duration=199.2s
+      n_estimators=650
+      max_depth=25
+      min_samples_split=7
+      min_samples_leaf=7
+      max_features=sqrt
+
+  Trial 16: MAE=0.0354  duration=225.6s
+      n_estimators=250
+      max_depth=30
+      min_samples_split=7
+      min_samples_leaf=7
+      max_features=None
+
+  Trial 17: MAE=0.0353  duration=329.4s
+      n_estimators=350
+      max_depth=21
+      min_samples_split=8
+      min_samples_leaf=6
+      max_features=None
+
+  Trial 18: MAE=0.0359  duration=290.8s
+      n_estimators=550
+      max_depth=19
+      min_samples_split=14
+      min_samples_leaf=4
+      max_features=sqrt
+
+  Trial 19: MAE=0.0359  duration=108.9s
+      n_estimators=200
+      max_depth=19
+      min_samples_split=9
+      min_samples_leaf=6
+      max_features=log2
+
+  Trial 20: MAE=0.0355  duration=626.8s
+      n_estimators=400
+      max_depth=32
+      min_samples_split=8
+      min_samples_leaf=4
+      max_features=None
+
+  Trial 21: MAE=0.0354  duration=446.1s
+      n_estimators=300
+      max_depth=28
+      min_samples_split=6
+      min_samples_leaf=7
+      max_features=None
+
+  Trial 22: MAE=0.0353  duration=626.6s
+      n_estimators=450
+      max_depth=23
+      min_samples_split=5
+      min_samples_leaf=8
+      max_features=None
+
+  Trial 23: MAE=0.0353  duration=381.1s
+      n_estimators=450
+      max_depth=21
+      min_samples_split=5
+      min_samples_leaf=9
+      max_features=None
+
+  Trial 24: MAE=0.0353  duration=420.9s
+      n_estimators=500
+      max_depth=21
+      min_samples_split=5
+      min_samples_leaf=8
+      max_features=None
+
+  Trial 25: MAE=0.0357  duration=580.2s
+      n_estimators=650
+      max_depth=15
+      min_samples_split=4
+      min_samples_leaf=9
+      max_features=None
+
+  Trial 26: MAE=0.0355  duration=741.6s
+      n_estimators=550
+      max_depth=16
+      min_samples_split=5
+      min_samples_leaf=8
+      max_features=None
+
+  Trial 27: MAE=0.0353  duration=1067.9s
+      n_estimators=750
+      max_depth=24
+      min_samples_split=5
+      min_samples_leaf=9
+      max_features=None
+
+  Trial 28: MAE=0.0360  duration=378.3s
+      n_estimators=800
+      max_depth=18
+      min_samples_split=3
+      min_samples_leaf=9
+      max_features=sqrt
+
+  Trial 29: MAE=0.0372  duration=297.9s
+      n_estimators=750
+      max_depth=12
+      min_samples_split=2
+      min_samples_leaf=10
+      max_features=log2
+
+  Trial 30: MAE=0.0412  duration=162.7s
+      n_estimators=800
+      max_depth=5
+      min_samples_split=9
+      min_samples_leaf=9
+      max_features=sqrt
+
+  Trial 31: MAE=0.0353  duration=702.2s
+      n_estimators=500
+      max_depth=23
+      min_samples_split=5
+      min_samples_leaf=8
+      max_features=None
+
+  Trial 32: MAE=0.0353  duration=690.7s
+      n_estimators=500
+      max_depth=24
+      min_samples_split=6
+      min_samples_leaf=8
+      max_features=None
+
+  Trial 33: MAE=0.0353  duration=1342.2s
+      n_estimators=1000
+      max_depth=22
+      min_samples_split=4
+      min_samples_leaf=9
+      max_features=None
+
+  Trial 34: MAE=0.0353  duration=963.1s
+      n_estimators=700
+      max_depth=27
+      min_samples_split=3
+      min_samples_leaf=8
+      max_features=None
+
+  Trial 35: MAE=0.0365  duration=1029.7s
+      n_estimators=1000
+      max_depth=12
+      min_samples_split=2
+      min_samples_leaf=10
+      max_features=None
+
+  Trial 36: MAE=0.0353  duration=849.7s
+      n_estimators=1000
+      max_depth=21
+      min_samples_split=4
+      min_samples_leaf=7
+      max_features=None
+
+  Trial 37: MAE=0.0353  duration=1206.0s
+      n_estimators=1000
+      max_depth=21
+      min_samples_split=4
+      min_samples_leaf=6
+      max_features=None
+
+  Trial 38: MAE=0.0362  duration=432.3s
+      n_estimators=950
+      max_depth=16
+      min_samples_split=12
+      min_samples_leaf=7
+      max_features=log2
+
+  Trial 39: MAE=0.0359  duration=1101.5s
+      n_estimators=850
+      max_depth=34
+      min_samples_split=2
+      min_samples_leaf=1
+      max_features=None
+
+  Trial 40: MAE=0.0353  duration=1061.6s
+      n_estimators=950
+      max_depth=26
+      min_samples_split=6
+      min_samples_leaf=9
+      max_features=None
+
+  Trial 41: MAE=0.0353  duration=1186.3s
+      n_estimators=1000
+      max_depth=21
+      min_samples_split=4
+      min_samples_leaf=5
+      max_features=None
+
+  Trial 42: MAE=0.0354  duration=771.1s
+      n_estimators=950
+      max_depth=18
+      min_samples_split=4
+      min_samples_leaf=6
+      max_features=None
+
+  Trial 43: MAE=0.0353  duration=1094.7s
+      n_estimators=850
+      max_depth=22
+      min_samples_split=3
+      min_samples_leaf=7
+      max_features=None
+
+  Trial 44: MAE=0.0354  duration=1255.5s
+      n_estimators=900
+      max_depth=29
+      min_samples_split=3
+      min_samples_leaf=7
+      max_features=None
+
+  Trial 45: MAE=0.0353  duration=817.9s
+      n_estimators=850
+      max_depth=24
+      min_samples_split=3
+      min_samples_leaf=9
+      max_features=None
+
+  Trial 46: MAE=0.0359  duration=626.1s
+      n_estimators=850
+      max_depth=14
+      min_samples_split=3
+      min_samples_leaf=8
+      max_features=None
+
+  Trial 47: MAE=0.0358  duration=292.2s
+      n_estimators=600
+      max_depth=36
+      min_samples_split=2
+      min_samples_leaf=7
+      max_features=sqrt
+
+  Trial 48: MAE=0.0383  duration=276.3s
+      n_estimators=850
+      max_depth=9
+      min_samples_split=3
+      min_samples_leaf=8
+      max_features=log2
+
+======================================================================

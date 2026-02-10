@@ -1,0 +1,76 @@
+{
+  "model_id": "rf_gaia_logg_teff_corrected_log_optuna_20260202_145049",
+  "timestamp": "20260202_145049",
+  "model_name": "Gaia + logg \u2192 Teff (Corrected, Log, Optuna)",
+  "description": "Temperature prediction using Gaia colors and logg with polynomial correction for hot stars, log-transformed target, and Optuna optimization",
+  "model_type": "RandomForestRegressor",
+  "n_features": 7,
+  "features": [
+    "g",
+    "bp",
+    "rp",
+    "bp_rp",
+    "g_bp",
+    "g_rp",
+    "logg_gaia"
+  ],
+  "data_source": "eb_unified_photometry.parquet",
+  "target": "teff_gaia_corrected",
+  "target_transform": "log",
+  "train_metrics": {
+    "mae": 408.98113281124034,
+    "rmse": 897.454566290537,
+    "r2": 0.7993675058858654,
+    "mean_relative_error": 6.345927026380623,
+    "within_5_percent": 59.984406405127864,
+    "within_10_percent": 79.12652360784068,
+    "within_20_percent": 93.77950735210572,
+    "n_samples": 1020932
+  },
+  "test_metrics": {
+    "mae": 510.43685030465105,
+    "rmse": 1074.7873189791069,
+    "r2": 0.7081131649491368,
+    "mean_relative_error": 7.988744500677078,
+    "within_5_percent": 53.21312991215904,
+    "within_10_percent": 72.86881841760894,
+    "within_20_percent": 90.04599700666839,
+    "n_samples": 255234
+  },
+  "hyperparameters": {
+    "n_estimators": 500,
+    "max_depth": 24,
+    "min_samples_split": 8,
+    "min_samples_leaf": 4,
+    "max_features": "sqrt",
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": 0
+  },
+  "config_file": "config/models/gaia_logg_teff_corrected_log_optuna.yaml",
+  "data_config": {
+    "source_file": "eb_unified_photometry.parquet",
+    "source_format": "parquet",
+    "source_location": "processed",
+    "target": "teff_gaia_corrected",
+    "features": [
+      "g",
+      "bp",
+      "rp",
+      "bp_rp",
+      "g_bp",
+      "g_rp",
+      "logg_gaia"
+    ],
+    "id_column": "source_id"
+  },
+  "teff_correction": {
+    "n_corrected": 19681,
+    "mean_correction": 2947.2440219483956,
+    "median_correction": 2641.1160991821525,
+    "threshold": 10000,
+    "degree": 2,
+    "target_column": "teff_gaia",
+    "corrected_column": "teff_gaia_corrected"
+  }
+}

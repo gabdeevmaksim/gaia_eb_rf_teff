@@ -1,0 +1,35 @@
+Model: Gaia Teff (Corrected, Clustering, Optuna-optimized)
+================================================================================
+
+Model ID: rf_gaia_teff_corrected_clustering_optuna_20260202_192405
+Timestamp: 20260202_192405
+Description: Temperature prediction using Gaia colors with polynomial correction for hot stars, clustering features, log-transformed target, and Optuna optimization
+
+Data Source: eb_unified_photometry.parquet
+Target: teff_gaia_corrected
+Target Transform: log
+Features: 11
+
+TRAIN SET PERFORMANCE:
+  MAE:  556.8 K
+  RMSE: 1125.5 K
+  R²:   0.6845
+  Within 10%: 69.5%
+
+TEST SET PERFORMANCE:
+  MAE:  585.9 K
+  RMSE: 1177.3 K
+  R²:   0.6498
+  Within 10%: 68.0%
+
+TOP 10 FEATURES:
+   1. cluster_prob_2                 0.1836
+   2. bp_rp                          0.1545
+   3. bp                             0.1467
+   4. g_rp                           0.1184
+   5. g                              0.1163
+   6. g_bp                           0.0970
+   7. rp                             0.0713
+   8. cluster_prob_1                 0.0333
+   9. cluster_prob_4                 0.0287
+  10. cluster_prob_3                 0.0264

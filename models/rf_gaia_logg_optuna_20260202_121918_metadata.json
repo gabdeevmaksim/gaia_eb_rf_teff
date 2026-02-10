@@ -1,0 +1,65 @@
+{
+  "model_id": "rf_gaia_logg_optuna_20260202_121918",
+  "timestamp": "20260202_121918",
+  "model_name": "Gaia \u2192 logg (Optuna-optimized)",
+  "description": "Surface gravity (logg) prediction using Gaia colors and Optuna hyperparameter optimization",
+  "model_type": "RandomForestRegressor",
+  "n_features": 6,
+  "features": [
+    "g",
+    "bp",
+    "rp",
+    "bp_rp",
+    "g_bp",
+    "g_rp"
+  ],
+  "data_source": "eb_unified_photometry.parquet",
+  "target": "logg_gaia",
+  "target_transform": "none",
+  "train_metrics": {
+    "mae": 0.12624556122972627,
+    "rmse": 0.17657486631064612,
+    "r2": 0.7510911877552165,
+    "mean_relative_error": 2.931088722696861,
+    "within_5_percent": 84.25144867630753,
+    "within_10_percent": 96.75188945003194,
+    "within_20_percent": 99.4903676248761,
+    "n_samples": 1020932
+  },
+  "test_metrics": {
+    "mae": 0.13231767401034183,
+    "rmse": 0.18665655712828602,
+    "r2": 0.7224835798159336,
+    "mean_relative_error": 3.0781538816026863,
+    "within_5_percent": 82.86356833337251,
+    "within_10_percent": 96.23482764835406,
+    "within_20_percent": 99.38918796085161,
+    "n_samples": 255234
+  },
+  "hyperparameters": {
+    "n_estimators": 350,
+    "max_depth": 15,
+    "min_samples_split": 7,
+    "min_samples_leaf": 6,
+    "max_features": "sqrt",
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": 0
+  },
+  "config_file": "config/models/gaia_logg_optuna.yaml",
+  "data_config": {
+    "source_file": "eb_unified_photometry.parquet",
+    "source_format": "parquet",
+    "source_location": "processed",
+    "target": "logg_gaia",
+    "features": [
+      "g",
+      "bp",
+      "rp",
+      "bp_rp",
+      "g_bp",
+      "g_rp"
+    ],
+    "id_column": "source_id"
+  }
+}

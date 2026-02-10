@@ -1,0 +1,30 @@
+Model: Gaia → logg (Optuna-optimized)
+================================================================================
+
+Model ID: rf_gaia_logg_optuna_20260202_121918
+Timestamp: 20260202_121918
+Description: Surface gravity (logg) prediction using Gaia colors and Optuna hyperparameter optimization
+
+Data Source: eb_unified_photometry.parquet
+Target: logg_gaia
+Features: 6
+
+TRAIN SET PERFORMANCE:
+  MAE:  0.1 K
+  RMSE: 0.2 K
+  R²:   0.7511
+  Within 10%: 96.8%
+
+TEST SET PERFORMANCE:
+  MAE:  0.1 K
+  RMSE: 0.2 K
+  R²:   0.7225
+  Within 10%: 96.2%
+
+TOP 10 FEATURES:
+   1. rp                             0.3594
+   2. g                              0.2950
+   3. bp                             0.1877
+   4. bp_rp                          0.0728
+   5. g_bp                           0.0486
+   6. g_rp                           0.0365

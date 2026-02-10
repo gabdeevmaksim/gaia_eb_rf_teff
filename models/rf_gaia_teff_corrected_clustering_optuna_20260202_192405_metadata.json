@@ -1,0 +1,85 @@
+{
+  "model_id": "rf_gaia_teff_corrected_clustering_optuna_20260202_192405",
+  "timestamp": "20260202_192405",
+  "model_name": "Gaia Teff (Corrected, Clustering, Optuna-optimized)",
+  "description": "Temperature prediction using Gaia colors with polynomial correction for hot stars, clustering features, log-transformed target, and Optuna optimization",
+  "model_type": "RandomForestRegressor",
+  "n_features": 11,
+  "features": [
+    "g",
+    "bp",
+    "rp",
+    "bp_rp",
+    "g_bp",
+    "g_rp",
+    "cluster_prob_0",
+    "cluster_prob_1",
+    "cluster_prob_2",
+    "cluster_prob_3",
+    "cluster_prob_4"
+  ],
+  "data_source": "eb_unified_photometry.parquet",
+  "target": "teff_gaia_corrected",
+  "target_transform": "log",
+  "train_metrics": {
+    "mae": 556.8428752735454,
+    "rmse": 1125.4950731317024,
+    "r2": 0.6844533853417974,
+    "mean_relative_error": 8.730011870718544,
+    "within_5_percent": 47.241344183549934,
+    "within_10_percent": 69.49933981891057,
+    "within_20_percent": 89.44699549039505,
+    "n_samples": 1020932
+  },
+  "test_metrics": {
+    "mae": 585.9475431532042,
+    "rmse": 1177.2930926652195,
+    "r2": 0.6497818641836954,
+    "mean_relative_error": 9.183421039769481,
+    "within_5_percent": 45.792488461568595,
+    "within_10_percent": 68.00034478165135,
+    "within_20_percent": 88.44041154391657,
+    "n_samples": 255234
+  },
+  "hyperparameters": {
+    "n_estimators": 400,
+    "max_depth": 16,
+    "min_samples_split": 6,
+    "min_samples_leaf": 5,
+    "max_features": "sqrt",
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": 0
+  },
+  "config_file": "config/models/gaia_teff_corrected_clustering_optuna.yaml",
+  "data_config": {
+    "source_file": "eb_unified_photometry.parquet",
+    "source_format": "parquet",
+    "source_location": "processed",
+    "target": "teff_gaia_corrected",
+    "features": [
+      "g",
+      "bp",
+      "rp",
+      "bp_rp",
+      "g_bp",
+      "g_rp"
+    ],
+    "id_column": "source_id"
+  },
+  "teff_correction": {
+    "n_corrected": 19681,
+    "mean_correction": 2947.2440219483956,
+    "median_correction": 2641.1160991821525,
+    "threshold": 10000,
+    "degree": 2,
+    "target_column": "teff_gaia",
+    "corrected_column": "teff_gaia_corrected"
+  },
+  "clustering": {
+    "method": "kmeans",
+    "n_clusters": 5,
+    "model_file": "rf_gaia_teff_corrected_clustering_optuna_20260202_192405_clustering_kmeans.pkl",
+    "scaler_file": "rf_gaia_teff_corrected_clustering_optuna_20260202_192405_clustering_scaler.pkl"
+  }
+}
