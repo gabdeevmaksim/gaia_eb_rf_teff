@@ -1,0 +1,29 @@
+Flag1 model — shared test set evaluation (probabilistic)
+======================================================================
+Reference config: gaia_teff_corrected_log_optuna.yaml
+Flag1 model:      rf_gaia_teff_flag1_corrected_optuna_20260304_144922.pkl
+Test samples:     255,234
+
+POINT METRICS (vs teff_gaia_corrected):
+  MAE:        653.2 K
+  RMSE:       1490.8 K
+  R²:         0.4298
+  Within 5%:  51.2%
+  Within 10%: 71.7%
+  Within 20%: 87.8%
+
+POINT METRICS (vs teff_gaia, uncorrected):
+  MAE:        614.2 K
+  RMSE:       1275.4 K
+  R²:         0.4392
+  Within 10%: 71.9%
+
+INNER UNCERTAINTY (std across trees):
+  Median: 72.4 K
+  Mean:   90.7 K
+
+PROBABILISTIC METRICS (5-component GMM, vs teff_gaia_corrected):
+  CRPS mean:   612.6 K
+  CRPS median: 186.6 K
+  PIT mean:    0.591  (ideal = 0.500)
+  PIT std:     0.442  (ideal ≈ 0.289)

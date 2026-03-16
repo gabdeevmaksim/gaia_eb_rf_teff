@@ -112,7 +112,7 @@ def create_temperature_comparison_histogram(df, output_dir):
         color="0.7",
         edgecolor="black",
         linewidth=1.5,
-        label="Predicted (best)",
+        label="Predicted",
     )
     ax.hist(
         gaia_temps,
@@ -120,16 +120,17 @@ def create_temperature_comparison_histogram(df, output_dir):
         histtype="step",
         edgecolor="black",
         linewidth=2.0,
-        label="GSP-Phot",
+        label="GSP-phot",
     )
 
-    ax.set_xlabel("Effective Temperature (K)")
-    ax.set_ylabel("Number of Objects")
+    ax.set_xlabel(r"$T_{\rm eff}$, K")
+    ax.set_ylabel("Number of objects")
     ax.legend(loc="upper right", frameon=True, fancybox=False, edgecolor="black")
     ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.8)
     ax.set_xlim(3000, 30000)
     ax.set_yscale("log")
     ax.ticklabel_format(style="plain", axis="x")
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True)
     plt.tight_layout()
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -153,23 +154,26 @@ def create_uncertainty_histogram(df, output_dir):
         print("  Skipping: no valid uncertainties.")
         return
 
-    p99 = np.percentile(uncertainties, 99)
-    uncertainties_filtered = uncertainties[uncertainties <= p99]
-
     fig, ax = plt.subplots(figsize=(8, 8))
-    bins = np.linspace(0, p99, 50)
+    bins = np.linspace(0, uncertainties.max(), 50)
     ax.hist(
-        uncertainties_filtered,
+        uncertainties,
         bins=bins,
         color="0.5",
         edgecolor="black",
         linewidth=1.5,
     )
-    ax.set_xlabel("Temperature Uncertainty (K)")
-    ax.set_ylabel("Number of Objects")
+    p50 = np.median(uncertainties)
+    p90 = np.quantile(uncertainties, 0.90)
+    ax.axvline(p50, color="k", linestyle="--", linewidth=2, label=f"Median (50%) = {p50:.3g}")
+    ax.axvline(p90, color="k", linestyle="-", linewidth=2, label=f"90% of objects = {p90:.3g}")
+    ax.set_xlabel(r"$T_{\rm eff}$ uncertainty, K")
+    ax.set_ylabel("Number of objects")
     ax.set_yscale("log")
     ax.set_ylim(bottom=0.5)
+    ax.legend(fontsize=12)
     ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.8)
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True)
     plt.tight_layout()
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -179,7 +183,7 @@ def create_uncertainty_histogram(df, output_dir):
         print(f"Saved: {path}")
     plt.close()
 
-    print(f"\nUncertainty: count={len(uncertainties):,}, mean={np.mean(uncertainties):.2g}, median={np.median(uncertainties):.2g}, 99th%={p99:.2g}")
+    print(f"\nUncertainty: count={len(uncertainties):,}, mean={np.mean(uncertainties):.2g}, median={p50:.2g}, 90% below={p90:.2g}")
 
 
 def main():

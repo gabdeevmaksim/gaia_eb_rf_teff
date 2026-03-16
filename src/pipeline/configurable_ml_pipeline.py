@@ -222,6 +222,7 @@ class ApplyTeffCorrectionStep(PipelineStep):
         # Get configuration
         target_column = teff_correction.get('target_column', 'teff_gaia')
         threshold = teff_correction.get('threshold', 10000)
+        blend_width = teff_correction.get('blend_width', 2000)
         coeffs_file = teff_correction.get('coefficients_file', 'teff_correction_coeffs_deg2.pkl')
 
         # Check if target column exists
@@ -266,46 +267,53 @@ class ApplyTeffCorrectionStep(PipelineStep):
             degree = len(coeffs_array) - 1
             self.logger.info(f"Using coefficient array (degree {degree})")
 
-        # Apply correction
+        # Apply correction with smooth blending to avoid a discontinuity
         self.logger.info(f"Applying polynomial correction for Teff > {threshold} K")
+        self.logger.info(f"  Blend width: {blend_width} K (smooth transition {threshold}–{threshold + blend_width} K)")
 
         # Convert to pandas for easier manipulation
         df_pd = df.to_pandas()
 
-        # Identify rows needing correction
+        # Identify rows needing correction (inside the blend zone or above)
         needs_correction = (df_pd[target_column] > threshold) & (df_pd[target_column] != -999.0)
         n_corrected = needs_correction.sum()
 
         if n_corrected > 0:
             teff_original = df_pd.loc[needs_correction, target_column].values
 
-            # Apply correction based on format
+            # Evaluate the polynomial for all affected stars
             if isinstance(coeffs_data, dict):
-                # Use Polynomial object's __call__ method
-                teff_corrected = polynomial(teff_original)
+                poly_values = polynomial(teff_original)
             else:
-                # Apply polynomial correction manually: Teff_corrected = sum(coeffs[i] * Teff^i)
-                teff_corrected = np.zeros_like(teff_original)
+                poly_values = np.zeros_like(teff_original)
                 for i, coeff in enumerate(coeffs_array):
-                    teff_corrected += coeff * (teff_original ** i)
+                    poly_values += coeff * (teff_original ** i)
 
-            # Calculate correction statistics
-            mean_correction = (teff_corrected - teff_original).mean()
-            median_correction = np.median(teff_corrected - teff_original)
+            # Hermite smoothstep blend: ramps from 0→1 over [threshold, threshold+blend_width]
+            t = np.clip((teff_original - threshold) / blend_width, 0.0, 1.0)
+            blend_factor = t * t * (3.0 - 2.0 * t)
+
+            correction_amount = poly_values - teff_original
+            teff_corrected = teff_original + correction_amount * blend_factor
+
+            # Statistics
+            actual_correction = teff_corrected - teff_original
+            mean_correction = actual_correction.mean()
+            median_correction = np.median(actual_correction)
+            n_in_blend = int(((teff_original >= threshold) & (teff_original < threshold + blend_width)).sum())
 
             self.logger.info(f"Correcting {n_corrected:,} stars ({n_corrected/len(df)*100:.1f}%)")
+            self.logger.info(f"  Stars in blend zone ({threshold}–{threshold + blend_width} K): {n_in_blend:,}")
             self.logger.info(f"  Mean correction: {mean_correction:+.0f} K")
             self.logger.info(f"  Median correction: {median_correction:+.0f} K")
             self.logger.info(f"  Original Teff range: {teff_original.min():.0f} - {teff_original.max():.0f} K")
             self.logger.info(f"  Corrected Teff range: {teff_corrected.min():.0f} - {teff_corrected.max():.0f} K")
+            self.logger.info(f"  Correction at threshold: {correction_amount[teff_original == teff_original.min()].min():+.0f} K → blended to ~0 K")
 
             # Create corrected column
             corrected_column = f"{target_column}_corrected"
-            df_pd[corrected_column] = df_pd[target_column].copy()
+            df_pd[corrected_column] = df_pd[target_column].astype(np.float64)
             df_pd.loc[needs_correction, corrected_column] = teff_corrected
-            
-            # Ensure corrected values are float64 to avoid dtype warnings
-            df_pd[corrected_column] = df_pd[corrected_column].astype(np.float64)
 
             self.logger.info(f"Created corrected column: {corrected_column}")
 
@@ -317,9 +325,11 @@ class ApplyTeffCorrectionStep(PipelineStep):
             context['teff_correction_column'] = corrected_column
             context['teff_correction_stats'] = {
                 'n_corrected': int(n_corrected),
+                'n_in_blend_zone': n_in_blend,
                 'mean_correction': float(mean_correction),
                 'median_correction': float(median_correction),
                 'threshold': threshold,
+                'blend_width': blend_width,
                 'degree': degree
             }
         else:
@@ -1145,8 +1155,18 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
             context['model_config'] = model_config
             return context
         
-        # Run optimization
-        self.logger.info("No cached hyperparameters found - running Optuna optimization...")
+        # No cache found -- warn and show how to skip
+        hp = model_config.get('hyperparameters', {})
+        self.logger.warning(
+            f"No cached hyperparameters for signature {signature} in {cache_file.name}."
+        )
+        if hp:
+            self.logger.warning(
+                "If you already have optimized hyperparameters, you can stop "
+                "the pipeline (Ctrl+C), set 'optuna_optimization.enabled: false' "
+                "in the config file, and re-run to use the hyperparameters block directly."
+            )
+        self.logger.info("Proceeding with Optuna optimization...")
         
         # Get optimization settings from config
         n_trials = optuna_config.get('n_trials', self.n_trials)
@@ -1272,6 +1292,20 @@ class EvaluateModelFromConfigStep(PipelineStep):
         y_pred_train = model.predict(X_train)
         y_pred_test = model.predict(X_test)
 
+        # Per-tree predictions for test set (used for uncertainty + GMM)
+        tree_preds_transformed = None
+        y_pred_test_uncertainty = None
+        if hasattr(model, 'estimators_') and model.estimators_:
+            feature_cols = context['feature_cols']
+            X_test_np = (
+                X_test[feature_cols].to_numpy()
+                if isinstance(X_test, pd.DataFrame)
+                else np.asarray(X_test)
+            )
+            tree_preds_transformed = np.array(
+                [est.predict(X_test_np) for est in model.estimators_]
+            )  # shape (n_trees, n_samples)
+
         # Inverse transform predictions if target was transformed
         target_transform = context.get('target_transform', 'none')
         if target_transform == 'log':
@@ -1280,18 +1314,75 @@ class EvaluateModelFromConfigStep(PipelineStep):
             y_pred_test = 10 ** y_pred_test
             y_train = 10 ** y_train
             y_test = 10 ** y_test
+            if tree_preds_transformed is not None:
+                unc_transformed = np.std(tree_preds_transformed, axis=0)
+                y_pred_test_uncertainty = y_pred_test * unc_transformed * np.log(10)
+                tree_preds_transformed = 10 ** tree_preds_transformed
         elif target_transform == 'log2':
             self.logger.info("Inverse transforming predictions (2^y)")
             y_pred_train = 2 ** y_pred_train
             y_pred_test = 2 ** y_pred_test
             y_train = 2 ** y_train
             y_test = 2 ** y_test
+            if tree_preds_transformed is not None:
+                unc_transformed = np.std(tree_preds_transformed, axis=0)
+                y_pred_test_uncertainty = y_pred_test * unc_transformed * np.log(2)
+                tree_preds_transformed = 2 ** tree_preds_transformed
         elif target_transform == 'ln':
             self.logger.info("Inverse transforming predictions (e^y)")
             y_pred_train = np.exp(y_pred_train)
             y_pred_test = np.exp(y_pred_test)
             y_train = np.exp(y_train)
             y_test = np.exp(y_test)
+            if tree_preds_transformed is not None:
+                unc_transformed = np.std(tree_preds_transformed, axis=0)
+                y_pred_test_uncertainty = y_pred_test * unc_transformed
+                tree_preds_transformed = np.exp(tree_preds_transformed)
+        else:
+            if tree_preds_transformed is not None:
+                y_pred_test_uncertainty = np.std(tree_preds_transformed, axis=0)
+
+        if y_pred_test_uncertainty is not None:
+            context['y_pred_test_uncertainty'] = y_pred_test_uncertainty
+            self.logger.info(
+                f"  Test set inner uncertainty: median={np.median(y_pred_test_uncertainty):.1f} K, "
+                f"mean={np.mean(y_pred_test_uncertainty):.1f} K"
+            )
+
+        # Fit 5-component Gaussian mixture to tree predictions (in original scale)
+        if tree_preds_transformed is not None:
+            from ..mixture_density import (
+                fit_gmm_to_tree_predictions,
+                gaussian_mixture_crps,
+                gaussian_mixture_pit,
+            )
+            n_components = 5
+            self.logger.info(
+                f"Fitting {n_components}-component GMM to tree predictions "
+                f"({tree_preds_transformed.shape[0]} trees, {tree_preds_transformed.shape[1]} samples)..."
+            )
+            gmm_weights, gmm_means, gmm_sigmas = fit_gmm_to_tree_predictions(
+                tree_preds_transformed,
+                n_components=n_components,
+                random_state=context.get('model_config', {}).get('training', {}).get('random_state', 42),
+            )
+            context['gmm_weights'] = gmm_weights
+            context['gmm_means'] = gmm_means
+            context['gmm_sigmas'] = gmm_sigmas
+
+            # CRPS and PIT
+            crps_values = gaussian_mixture_crps(gmm_weights, gmm_means, gmm_sigmas, y_test)
+            pit_values = gaussian_mixture_pit(gmm_weights, gmm_means, gmm_sigmas, y_test)
+            context['crps_values'] = crps_values
+            context['pit_values'] = pit_values
+
+            mean_crps = float(np.mean(crps_values))
+            median_crps = float(np.median(crps_values))
+            context['crps_stats'] = {'mean': mean_crps, 'median': median_crps}
+
+            self.logger.info(f"  GMM CRPS:  mean={mean_crps:.1f}, median={median_crps:.1f}")
+            self.logger.info(f"  GMM PIT:   mean={np.mean(pit_values):.3f} (ideal=0.5), "
+                             f"std={np.std(pit_values):.3f} (ideal~0.289)")
 
         # Calculate metrics (on original scale)
         train_metrics = self._calculate_metrics(y_train, y_pred_train)
@@ -1407,6 +1498,16 @@ class SaveModelFromConfigStep(PipelineStep):
             'data_config': model_config['data']  # Save full data config for validation
         }
 
+        # Add probabilistic metrics (GMM-based CRPS/PIT)
+        if context.get('crps_stats'):
+            metadata['crps_stats'] = context['crps_stats']
+            pit = context.get('pit_values')
+            if pit is not None:
+                metadata['pit_stats'] = {
+                    'mean': float(np.mean(pit)),
+                    'std': float(np.std(pit)),
+                }
+
         # Add Teff correction info if applied
         if context.get('teff_correction_applied', False):
             metadata['teff_correction'] = context.get('teff_correction_stats', {})
@@ -1432,7 +1533,22 @@ class SaveModelFromConfigStep(PipelineStep):
             target_transform = context.get('target_transform', 'none')
             if target_transform != 'none':
                 f.write(f"Target Transform: {target_transform}\n")
-            f.write(f"Features: {len(feature_cols)}\n\n")
+            f.write(f"Features: {len(feature_cols)}\n")
+
+            # List all feature columns for clarity (including any EBV features)
+            if feature_cols:
+                f.write("Feature columns:\n")
+                for feat in feature_cols:
+                    f.write(f"  - {feat}\n")
+
+                # Explicitly highlight extinction features if present
+                ebv_features = [f for f in feature_cols if 'ebv' in f.lower()]
+                if ebv_features:
+                    f.write("\nExtinction feature columns (E(B-V)):\n")
+                    for feat in ebv_features:
+                        f.write(f"  - {feat}\n")
+
+            f.write("\n")
 
             f.write("TRAIN SET PERFORMANCE:\n")
             f.write(f"  MAE:  {train_metrics['mae']:.1f} K\n")
@@ -1451,6 +1567,16 @@ class SaveModelFromConfigStep(PipelineStep):
             for i, (feature, importance) in enumerate(top_features, 1):
                 f.write(f"  {i:2d}. {feature:30s} {importance:.4f}\n")
 
+            if context.get('crps_stats'):
+                crps_stats = context['crps_stats']
+                f.write("\nPROBABILISTIC METRICS (5-component GMM):\n")
+                f.write(f"  CRPS mean:   {crps_stats['mean']:.1f} K\n")
+                f.write(f"  CRPS median: {crps_stats['median']:.1f} K\n")
+                pit = context.get('pit_values')
+                if pit is not None:
+                    f.write(f"  PIT mean:    {np.mean(pit):.3f} (ideal=0.500)\n")
+                    f.write(f"  PIT std:     {np.std(pit):.3f} (ideal~0.289)\n")
+
         self.logger.info(f"✓ Saved summary: {summary_file.name}")
 
         # Save predictions with original features (for color-temp plots)
@@ -1459,6 +1585,20 @@ class SaveModelFromConfigStep(PipelineStep):
             'y_true': context['y_test'],
             'y_pred': context['y_pred_test']
         })
+        if context.get('y_pred_test_uncertainty') is not None:
+            predictions_df['y_pred_uncertainty'] = context['y_pred_test_uncertainty']
+            self.logger.info("  (includes inner uncertainty column: y_pred_uncertainty)")
+
+        # GMM mixture parameters (5 components)
+        if context.get('gmm_weights') is not None:
+            n_comp = context['gmm_weights'].shape[1]
+            for k in range(n_comp):
+                predictions_df[f'gmm_weight_{k}'] = context['gmm_weights'][:, k]
+                predictions_df[f'gmm_mean_{k}'] = context['gmm_means'][:, k]
+                predictions_df[f'gmm_sigma_{k}'] = context['gmm_sigmas'][:, k]
+            predictions_df['crps'] = context['crps_values']
+            predictions_df['pit'] = context['pit_values']
+            self.logger.info(f"  (includes {n_comp}-component GMM, CRPS, PIT)")
 
         # Add original color features to predictions for validation plots
         # Get the original features from X_test (before any feature engineering)

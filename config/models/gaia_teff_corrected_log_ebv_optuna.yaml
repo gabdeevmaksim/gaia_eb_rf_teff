@@ -1,0 +1,84 @@
+model:
+  name: Gaia Teff (Corrected, Log, +EBV, Optuna)
+  id_prefix: rf_gaia_teff_corrected_log_ebv_optuna
+  description: Temperature prediction using Gaia colors plus E(B-V) extinction
+    with polynomial Teff correction, log-transformed target, and Optuna hyperparameter optimization
+
+teff_correction:
+  enabled: true
+  target_column: teff_gaia
+  threshold: 10000
+  blend_width: 2000
+  coefficients_file: teff_correction_coeffs_deg2.pkl
+
+target_transform: log
+
+data:
+  source_file: eb_unified_photometry.parquet
+  source_format: parquet
+  source_location: raw
+  target: teff_gaia_corrected
+  features:
+  - g
+  - bp
+  - rp
+  - bp_rp
+  - g_bp
+  - g_rp
+  - ebv_sandf
+
+  id_column: source_id
+
+preprocessing:
+  missing_value: -999.0
+  drop_missing: true
+
+training:
+  test_size: 0.2
+  random_state: 42
+
+optuna_optimization:
+  enabled: true
+  n_trials: 150
+  timeout: null
+  search_space:
+    n_estimators: [300, 800, 20]
+    # Allow significantly deeper trees to capture complex structure
+    max_depth: [15, 40]
+    min_samples_split: [2, 10]
+    # Allow very small leaves so trees can capture fine structure
+    min_samples_leaf: [1, 2]
+    # Use more features per split than sqrt/log2 (up to all features)
+    max_features: [sqrt, 0.8, 1.0]
+
+hyperparameters:
+  n_estimators: 500
+  max_depth: 25
+  min_samples_split: 4
+  min_samples_leaf: 2
+  max_features: 0.8
+  random_state: 42
+  n_jobs: -1
+  verbose: 0
+
+feature_engineering:
+  enabled: false
+
+clustering:
+  enabled: false
+
+output:
+  save_model: true
+  save_predictions: true
+  save_test_predictions: true
+  models_dir: models
+  predictions_dir: data/predictions
+
+validation:
+  create_plots: true
+  n_temp_bins: 5
+  target_info:
+    name: Temperature
+    unit: K
+    short: Teff
+

@@ -680,3 +680,268 @@ def print_distribution_statistics(
     print(f"\nDifference in means: {train_data[train_col].mean() - predictions[pred_col].mean():.0f} K")
     print(f"Kolmogorov-Smirnov test: p-value = {ks_pval:.2e}")
     print(f"Wasserstein Distance: {wasserstein_dist:.2f} K")
+
+
+# ---------------------------------------------------------------------------
+# Probabilistic calibration plots (GMM-based PIT & CRPS)
+# ---------------------------------------------------------------------------
+
+def plot_pit_histogram(
+    pit_values: np.ndarray,
+    model_id: str,
+    subdir: str,
+    n_bins: int = 30,
+    target_info: dict = None,
+):
+    """
+    PIT (Probability Integral Transform) histogram.
+
+    A well-calibrated probabilistic prediction produces PIT values that
+    are uniformly distributed on [0, 1].  Deviations reveal:
+    - U-shape  → under-dispersed (too narrow uncertainties)
+    - ∩-shape  → over-dispersed (too wide uncertainties)
+    - Skew     → biased predictions
+
+    Parameters
+    ----------
+    pit_values : np.ndarray, shape (n_samples,)
+        CDF of the predictive mixture evaluated at the true value.
+    model_id : str
+        Model identifier for filename.
+    subdir : str
+        Subdirectory for saving.
+    n_bins : int
+        Number of histogram bins.
+    target_info : dict, optional
+        Target variable information (name, unit, short).
+    """
+    _check_plotting_available()
+    print("\n  Creating PIT histogram...")
+
+    if target_info is None:
+        target_info = {'name': 'Temperature', 'unit': 'K', 'short': 'Teff'}
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    ax.hist(
+        pit_values, bins=n_bins, range=(0, 1),
+        color='0.55', edgecolor='black', linewidth=0.8, density=True,
+    )
+
+    # Ideal uniform line
+    ax.axhline(1.0, color='k', linestyle='--', linewidth=1.5, label='Ideal (uniform)')
+
+    ax.set_xlabel('PIT value', fontsize=14)
+    ax.set_ylabel('Density', fontsize=14)
+    ax.set_xlim(0, 1)
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True,
+                   labelsize=13)
+    ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.8)
+
+    pit_mean = np.mean(pit_values)
+    pit_std = np.std(pit_values)
+    ax.legend(fontsize=12, title=f'mean={pit_mean:.3f}, std={pit_std:.3f}',
+              title_fontsize=11, frameon=True, fancybox=False, edgecolor='black')
+
+    plt.tight_layout()
+    save_figure(fig, f'{model_id}_pit_histogram.png', subdir)
+    plt.close()
+
+
+def plot_crps_distribution(
+    crps_values: np.ndarray,
+    model_id: str,
+    subdir: str,
+    n_bins: int = 60,
+    target_info: dict = None,
+):
+    """
+    CRPS (Continuous Ranked Probability Score) distribution.
+
+    Lower CRPS means better probabilistic predictions.  The histogram
+    shows the spread; vertical lines mark the median and mean.
+
+    Parameters
+    ----------
+    crps_values : np.ndarray, shape (n_samples,)
+        Per-sample CRPS values (in target units, e.g. K).
+    model_id : str
+        Model identifier for filename.
+    subdir : str
+        Subdirectory for saving.
+    n_bins : int
+        Number of histogram bins.
+    target_info : dict, optional
+        Target variable information (name, unit, short).
+    """
+    _check_plotting_available()
+    print("\n  Creating CRPS distribution plot...")
+
+    if target_info is None:
+        target_info = {'name': 'Temperature', 'unit': 'K', 'short': 'Teff'}
+
+    unit = target_info['unit']
+    unit_str = f' {unit}' if unit else ''
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    ax.hist(
+        crps_values, bins=n_bins,
+        color='0.55', edgecolor='black', linewidth=0.8,
+    )
+
+    median_crps = np.median(crps_values)
+    mean_crps = np.mean(crps_values)
+    ax.axvline(median_crps, color='k', linestyle='--', linewidth=2,
+               label=f'Median = {median_crps:.1f}{unit_str}')
+    ax.axvline(mean_crps, color='k', linestyle='-', linewidth=2,
+               label=f'Mean = {mean_crps:.1f}{unit_str}')
+
+    ax.set_xlabel(f'CRPS ({unit})', fontsize=14)
+    ax.set_ylabel('Number of objects', fontsize=14)
+    ax.set_yscale('log')
+    ax.set_ylim(bottom=0.5)
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True,
+                   labelsize=13)
+    ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.8)
+    ax.legend(fontsize=12, frameon=True, fancybox=False, edgecolor='black')
+
+    plt.tight_layout()
+    save_figure(fig, f'{model_id}_crps_distribution.png', subdir)
+    plt.close()
+
+
+def plot_gmm_density_map(
+    test_pred: pd.DataFrame,
+    model_id: str,
+    subdir: str,
+    n_grid: int = 200,
+    target_info: dict = None,
+):
+    """
+    Summed predictive probability density map (true vs estimated).
+
+    For every test object the 5-component GMM predictive distribution
+    is evaluated on a regular grid of estimated values.  The individual
+    densities are accumulated into a 2-D histogram keyed by
+    (true value, estimated value), then log10-scaled and displayed as
+    a colour map -- analogous to the "log summed probability density"
+    plots used in photo-z literature.
+
+    Parameters
+    ----------
+    test_pred : pd.DataFrame
+        Must contain ``true_value`` and GMM columns
+        ``gmm_weight_0 … gmm_weight_K``, ``gmm_mean_0 …``,
+        ``gmm_sigma_0 …``.
+    model_id : str
+        Model identifier for the output filename.
+    subdir : str
+        Subdirectory under ``reports/figures/``.
+    n_grid : int
+        Number of bins along each axis (default 200).
+    target_info : dict, optional
+        ``{name, unit, short}`` for axis labels.
+    """
+    _check_plotting_available()
+    from matplotlib.colors import Normalize
+    print("\n  Creating GMM density map...")
+
+    if target_info is None:
+        target_info = {'name': 'Temperature', 'unit': 'K', 'short': 'Teff'}
+
+    # Discover number of GMM components
+    n_components = sum(1 for c in test_pred.columns if c.startswith('gmm_weight_'))
+    weights = np.column_stack([test_pred[f'gmm_weight_{k}'].values for k in range(n_components)])
+    means   = np.column_stack([test_pred[f'gmm_mean_{k}'].values   for k in range(n_components)])
+    sigmas  = np.column_stack([test_pred[f'gmm_sigma_{k}'].values  for k in range(n_components)])
+    true_vals = test_pred['true_value'].values
+
+    # Grid range: clip to sensible physical bounds
+    val_min = max(np.percentile(true_vals, 0.5), 2500)
+    val_max = min(np.percentile(true_vals, 99.5), 50000)
+
+    x_edges = np.linspace(val_min, val_max, n_grid + 1)
+    y_edges = np.linspace(val_min, val_max, n_grid + 1)
+    y_centers = 0.5 * (y_edges[:-1] + y_edges[1:])
+
+    # Bin each object along the true-value axis
+    x_idx = np.digitize(true_vals, x_edges) - 1
+    x_idx = np.clip(x_idx, 0, n_grid - 1)
+
+    # Accumulate GMM densities in chunks to limit memory
+    density = np.zeros((n_grid, n_grid), dtype=np.float64)  # [y, x]
+    chunk_size = 5000
+    n_samples = len(true_vals)
+
+    for start in range(0, n_samples, chunk_size):
+        end = min(start + chunk_size, n_samples)
+        chunk_pdf = np.zeros((end - start, n_grid), dtype=np.float64)
+
+        for k in range(n_components):
+            w   = weights[start:end, k, None]
+            mu  = means[start:end, k, None]
+            sig = sigmas[start:end, k, None]
+            z   = (y_centers[None, :] - mu) / sig
+            chunk_pdf += w * np.exp(-0.5 * z * z) / (sig * np.sqrt(2.0 * np.pi))
+
+        chunk_x = x_idx[start:end]
+        for j in range(end - start):
+            density[:, chunk_x[j]] += chunk_pdf[j]
+
+    # Log-scale; mask empty bins so they render as background
+    with np.errstate(divide='ignore'):
+        log_density = np.log10(density)
+    log_density[np.isinf(log_density)] = np.nan
+
+    # ---- Plot ----
+    from matplotlib.colors import LinearSegmentedColormap
+
+    # Custom colormap: white → black → blue → green → yellow (low → high)
+    _density_colors = [
+        (0.00, 'white'),
+        (0.05, '#E0E0E0'),
+        (0.12, 'black'),
+        (0.25, '#00008B'),   # dark blue
+        (0.38, '#0000FF'),   # blue
+        (0.48, '#00BFFF'),   # cyan
+        (0.58, '#00CC00'),   # green
+        (0.72, '#FFFF00'),   # yellow
+        (0.85, '#FF6600'),   # orange
+        (1.00, '#FF0000'),   # red
+    ]
+    density_cmap = LinearSegmentedColormap.from_list(
+        'density_bkw',
+        [(pos, col) for pos, col in _density_colors],
+    )
+
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    vmax_plot = np.nanmax(log_density)
+    vmin_plot = vmax_plot - 7.0
+
+    im = ax.pcolormesh(
+        x_edges, y_edges, log_density,
+        cmap=density_cmap, shading='flat',
+        norm=Normalize(vmin=vmin_plot, vmax=vmax_plot),
+        rasterized=True,
+    )
+
+    ax.plot([val_min, val_max], [val_min, val_max], 'k--', lw=1.5)
+
+    unit_str = f" ({target_info['unit']})" if target_info['unit'] else ""
+    ax.set_xlabel(f"true {target_info['short'].lower()}{unit_str}", fontsize=14)
+    ax.set_ylabel(f"estimated {target_info['short'].lower()}{unit_str}", fontsize=14)
+    ax.set_title('RF', fontsize=14)
+    ax.set_xlim(val_min, val_max)
+    ax.set_ylim(val_min, val_max)
+    ax.set_aspect('equal')
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True,
+                   labelsize=12)
+
+    cbar = plt.colorbar(im, ax=ax, pad=0.02)
+    cbar.set_label('log summed probability density', fontsize=12)
+
+    plt.tight_layout()
+    save_figure(fig, f'{model_id}_gmm_density.png', subdir)
+    plt.close()

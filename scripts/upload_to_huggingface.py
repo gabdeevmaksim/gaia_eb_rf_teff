@@ -20,6 +20,14 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+try:
+    from dotenv import load_dotenv
+    env_file = PROJECT_ROOT / ".env"
+    if env_file.exists():
+        load_dotenv(env_file)
+except ImportError:
+    pass
+
 from src.huggingface import (
     HF_DATASET_REPO,
     HF_MODEL_REPO,
@@ -38,7 +46,7 @@ def main():
     )
     parser.add_argument(
         "--datasets",
-        choices=["photometry", "predictions", "catalog", "training", "all"],
+        choices=["photometry", "predictions", "all"],
         help="Dataset type to upload",
     )
     parser.add_argument(
@@ -60,6 +68,11 @@ def main():
         action="store_true",
         help="Create HuggingFace repositories if they don't exist",
     )
+    parser.add_argument(
+        "--yes", "-y",
+        action="store_true",
+        help="Skip confirmation when HF_TOKEN is not set",
+    )
 
     args = parser.parse_args()
 
@@ -70,7 +83,7 @@ def main():
 
     if not os.getenv("HF_TOKEN") and (args.datasets or args.models or args.clean):
         print("Warning: HF_TOKEN not set. Use: huggingface-cli login")
-        if input("Continue? (y/N): ").lower() != "y":
+        if not args.yes and input("Continue? (y/N): ").lower() != "y":
             sys.exit(1)
 
     if args.create_repos:

@@ -178,9 +178,26 @@ class EvaluateModelStep(PipelineStep):
         model = context['model']
         X_test = context['X_test']
         y_test = context['y_test']
+        feature_cols = context['feature_cols']
 
         # Make predictions
         y_pred = model.predict(X_test)
+
+        # Inner uncertainties (std across trees) for test set
+        y_pred_uncertainty = None
+        if hasattr(model, 'estimators_') and model.estimators_:
+            X_test_np = (
+                X_test[feature_cols].to_numpy()
+                if isinstance(X_test, pd.DataFrame)
+                else np.asarray(X_test)
+            )
+            tree_preds = np.array([est.predict(X_test_np) for est in model.estimators_])
+            y_pred_uncertainty = np.std(tree_preds, axis=0)
+            context['y_pred_uncertainty'] = y_pred_uncertainty
+            self.logger.info(
+                f"  Test set inner uncertainty: median={np.median(y_pred_uncertainty):.1f} K, "
+                f"mean={np.mean(y_pred_uncertainty):.1f} K"
+            )
 
         # Calculate metrics
         mae = mean_absolute_error(y_test, y_pred)
@@ -263,6 +280,9 @@ class SaveModelStep(PipelineStep):
             'y_true': context['y_test'],
             'y_pred': context['y_pred']
         })
+        if context.get('y_pred_uncertainty') is not None:
+            predictions_df['y_pred_uncertainty'] = context['y_pred_uncertainty']
+            self.logger.info("Saved predictions (with y_pred_uncertainty)")
         pred_file = models_dir / f"{model_id}_test_predictions.parquet"
         predictions_df.to_parquet(pred_file)
         self.logger.info(f"Saved predictions: {pred_file.name}")

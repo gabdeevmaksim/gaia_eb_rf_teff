@@ -29,6 +29,22 @@ import logging
 import sys
 from pathlib import Path
 
+# Directory containing model configs (relative to project root)
+MODELS_CONFIG_DIR = Path(__file__).resolve().parent / "config" / "models"
+# Configs to skip when running "all" (templates and registry, not runnable trainings)
+SKIP_CONFIG_NAMES = {"template_training_config.yaml", "model_registry.yaml"}
+
+
+def get_all_training_configs():
+    """Return paths to all runnable training configs in config/models."""
+    if not MODELS_CONFIG_DIR.exists():
+        return []
+    return sorted(
+        p for p in MODELS_CONFIG_DIR.glob("*.yaml")
+        if p.name not in SKIP_CONFIG_NAMES
+    )
+
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -170,7 +186,7 @@ def run_complete_pipeline(n_estimators=None, max_depth=None, model_config=None, 
         n_estimators=n_estimators,
         max_depth=max_depth,
         model_config=model_config,
-        dry_run=dry_run
+        dry_run=dry_run,
     )
 
     if not dry_run:
@@ -203,8 +219,9 @@ Examples:
   python pipeline.py --data
 
   # Run ML training with model config (RECOMMENDED)
-  python pipeline.py --ml --ml-config config/models/gaia_2mass_ir.yaml
-  python pipeline.py --ml --ml-config config/models/panstarrs_unified.yaml
+  python pipeline.py --ml --ml-config config/models/gaia_teff_flag1_corrected_log_optuna.yaml
+  # Run all training configs (every YAML in config/models/, excludes template and registry)
+  python pipeline.py --ml --ml-config all
 
   # Run prediction with trained model
   python pipeline.py --predict --pred-config config/prediction/predict_gaia_2mass_ir.yaml
@@ -257,7 +274,7 @@ Examples:
         '--ml-config',
         type=str,
         metavar='PATH',
-        help='Path to model configuration YAML file (e.g., config/models/gaia_2mass_ir.yaml)'
+        help='Path to model config YAML, or "all" to run every config in config/models/'
     )
 
     # Prediction configuration
@@ -321,19 +338,37 @@ Examples:
                 n_estimators=args.n_estimators,
                 max_depth=args.max_depth,
                 model_config=args.ml_config,
-                dry_run=args.dry_run
+                dry_run=args.dry_run,
             )
 
         elif args.data:
             run_data_pipeline(dry_run=args.dry_run)
 
         elif args.ml:
-            run_ml_pipeline(
-                n_estimators=args.n_estimators,
-                max_depth=args.max_depth,
-                model_config=args.ml_config,
-                dry_run=args.dry_run
-            )
+            if args.ml_config == "all":
+                configs = get_all_training_configs()
+                if not configs:
+                    logger.warning("No training configs found in config/models/")
+                else:
+                    logger.info(f"Running {len(configs)} training configs")
+                    for i, config_path in enumerate(configs, 1):
+                        logger.info("")
+                        logger.info("=" * 60)
+                        logger.info(f"  [{i}/{len(configs)}] {config_path.name}")
+                        logger.info("=" * 60)
+                        run_ml_pipeline(
+                            n_estimators=args.n_estimators,
+                            max_depth=args.max_depth,
+                            model_config=str(config_path),
+                            dry_run=args.dry_run,
+                        )
+            else:
+                run_ml_pipeline(
+                    n_estimators=args.n_estimators,
+                    max_depth=args.max_depth,
+                    model_config=args.ml_config,
+                    dry_run=args.dry_run,
+                )
 
         elif args.predict:
             run_prediction_pipeline(

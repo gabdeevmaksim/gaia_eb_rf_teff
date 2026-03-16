@@ -67,9 +67,14 @@ class LoadModelForValidationStep(PipelineStep):
         model_pattern = val_config['model']['model_pattern']
         models_dir = Path(config.get_path('models'))
 
-        # Find model files
+        # Find model files (exclude auxiliary files like _clustering_kmeans, _scaler, etc.)
+        import re
+        _TIMESTAMP_RE = re.compile(r'_\d{8}_\d{6}$')
         if '*' in model_pattern:
-            model_files = sorted(models_dir.glob(f"{model_pattern}.pkl"))
+            model_files = sorted(
+                f for f in models_dir.glob(f"{model_pattern}.pkl")
+                if _TIMESTAMP_RE.search(f.stem)
+            )
             if not model_files:
                 raise FileNotFoundError(f"No model found matching: {model_pattern}")
             model_file = model_files[-1]  # Most recent
@@ -82,8 +87,13 @@ class LoadModelForValidationStep(PipelineStep):
         model_id = model_file.stem
         self.logger.info(f"Validating model: {model_id}")
 
-        # Load model
-        model = joblib.load(model_file)
+        # Load model (optional -- only needed for feature importance plot)
+        try:
+            model = joblib.load(model_file)
+        except (MemoryError, OSError) as e:
+            self.logger.warning(f"Could not load model (memory): {e}")
+            self.logger.warning("Feature importance plot will be skipped")
+            model = None
 
         # Load metadata
         metadata_file = model_file.with_name(f"{model_id}_metadata.json")
@@ -507,8 +517,8 @@ class GenerateValidationPlotsStep(PipelineStep):
 
         # 5. Feature importance (if available)
         if requested_plots.get('feature_importance', True):
-            model = context['model']
-            if hasattr(model, 'feature_importances_'):
+            model = context.get('model')
+            if model is not None and hasattr(model, 'feature_importances_'):
                 self.logger.info("Generating feature importance plot...")
                 feature_names = metadata.get('features', [f'Feature {i}' for i in range(len(model.feature_importances_))])
                 validation_plots.plot_feature_importance(
@@ -557,6 +567,42 @@ class GenerateValidationPlotsStep(PipelineStep):
                         plot_count += 1
                     else:
                         self.logger.warning(f"Color column '{color_col}' not found in test predictions")
+
+        # 7. PIT histogram (if GMM columns present)
+        has_pit = 'pit' in test_pred.columns
+        if has_pit and requested_plots.get('pit_histogram', True):
+            self.logger.info("Generating PIT histogram...")
+            validation_plots.plot_pit_histogram(
+                pit_values=test_pred['pit'].values,
+                model_id=model_id,
+                subdir=figures_subdir,
+                target_info=target_info,
+            )
+            plot_count += 1
+
+        # 8. CRPS distribution (if GMM columns present)
+        has_crps = 'crps' in test_pred.columns
+        if has_crps and requested_plots.get('crps_distribution', True):
+            self.logger.info("Generating CRPS distribution plot...")
+            validation_plots.plot_crps_distribution(
+                crps_values=test_pred['crps'].values,
+                model_id=model_id,
+                subdir=figures_subdir,
+                target_info=target_info,
+            )
+            plot_count += 1
+
+        # 9. GMM density map (if GMM columns present)
+        has_gmm = 'gmm_weight_0' in test_pred.columns
+        if has_gmm and requested_plots.get('gmm_density', True):
+            self.logger.info("Generating GMM density map...")
+            validation_plots.plot_gmm_density_map(
+                test_pred=test_pred,
+                model_id=model_id,
+                subdir=figures_subdir,
+                target_info=target_info,
+            )
+            plot_count += 1
 
         self.logger.info(f"✓ Generated {plot_count} validation plots")
         context['n_plots_generated'] = plot_count
@@ -623,6 +669,18 @@ class SaveValidationReportStep(PipelineStep):
                 f.write(f"    MAE:  {bin_stat['mae']:.4f}{unit_str}\n")
                 f.write(f"    RMSE: {bin_stat['rmse']:.4f}{unit_str}\n")
                 f.write(f"    R²:   {bin_stat['r2']:.4f}\n")
+
+            # Probabilistic metrics (if GMM columns were available)
+            test_pred = context['test_predictions']
+            if 'crps' in test_pred.columns:
+                crps = test_pred['crps'].values
+                f.write(f"\nPROBABILISTIC METRICS (5-component GMM):\n")
+                f.write(f"  CRPS mean:   {np.mean(crps):.1f}{unit_str}\n")
+                f.write(f"  CRPS median: {np.median(crps):.1f}{unit_str}\n")
+            if 'pit' in test_pred.columns:
+                pit = test_pred['pit'].values
+                f.write(f"  PIT mean:    {np.mean(pit):.3f} (ideal=0.500)\n")
+                f.write(f"  PIT std:     {np.std(pit):.3f} (ideal~0.289)\n")
 
             f.write(f"\nVALIDATION PLOTS:\n")
             f.write(f"  Location: reports/figures/{context['figures_subdir']}/\n")

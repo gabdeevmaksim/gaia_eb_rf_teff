@@ -45,6 +45,7 @@ def upload_datasets_impl(dataset_type: str, project_root: Path) -> None:
         raise ImportError("huggingface_hub is required. pip install huggingface_hub")
     api = HfApi()
 
+    # Two datasets: original (raw) and final catalog (processed)
     datasets = {
         "photometry": {
             "folder": project_root / "data" / "raw",
@@ -59,20 +60,10 @@ def upload_datasets_impl(dataset_type: str, project_root: Path) -> None:
             ],
             "path_in_repo": "predictions",
         },
-        "catalog": {
-            "folder": project_root / "data" / "processed",
-            "patterns": ["stars_types_with_best_predictions*"],
-            "path_in_repo": "catalogs",
-        },
-        "training": {
-            "folder": project_root / "data" / "processed",
-            "patterns": ["gaia_all_colors_train*.parquet"],
-            "path_in_repo": "training",
-        },
     }
 
     if dataset_type == "all":
-        for dt in ["photometry", "predictions", "catalog", "training"]:
+        for dt in ["photometry", "predictions"]:
             upload_datasets_impl(dt, project_root)
         return
 

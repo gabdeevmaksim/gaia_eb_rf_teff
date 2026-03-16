@@ -1,0 +1,56 @@
+Validation Report: Gaia Teff (Corrected, Clustering, Optuna-optimized)
+================================================================================
+
+Model ID: rf_gaia_teff_corrected_clustering_optuna_20260304_150201
+Model File: /Users/wera/Max_astro/Slovakia/gaia_eb_rf_teff/models/rf_gaia_teff_corrected_clustering_optuna_20260304_150201.pkl
+Validation Date: 2026-03-04 15:39:32
+
+Test Set: 255,234 samples
+
+OVERALL PERFORMANCE:
+  MAE:  580.7728 K
+  RMSE: 1163.5303 K
+  R²:   0.6527
+  Mean Relative Error: 9.14%
+
+ACCURACY THRESHOLDS:
+  Within  5%: 45.9%
+  Within 10%: 68.1%
+  Within 20%: 88.5%
+
+PERFORMANCE BY TEMPERATURE RANGE:
+
+  [0.00 - 4000.00] K (n=26,745):
+    MAE:  353.9693 K
+    RMSE: 582.3449 K
+    R²:   -14.0944
+
+  [4000.00 - 5000.00] K (n=101,138):
+    MAE:  310.3913 K
+    RMSE: 476.2919 K
+    R²:   -1.9537
+
+  [5000.00 - 6000.00] K (n=71,296):
+    MAE:  387.1543 K
+    RMSE: 501.1903 K
+    R²:   -2.1906
+
+  [6000.00 - 8000.00] K (n=37,971):
+    MAE:  701.8387 K
+    RMSE: 933.7376 K
+    R²:   -1.6539
+
+  [8000.00 - 50000.00] K (n=18,084):
+    MAE:  2937.4936 K
+    RMSE: 3809.9948 K
+    R²:   0.0418
+
+PROBABILISTIC METRICS (5-component GMM):
+  CRPS mean:   502.5 K
+  CRPS median: 225.3 K
+  PIT mean:    0.404 (ideal=0.500)
+  PIT std:     0.432 (ideal~0.289)
+
+VALIDATION PLOTS:
+  Location: reports/figures/gaia_teff_corrected_clustering_optuna_validation/
+  Number of plots: 11

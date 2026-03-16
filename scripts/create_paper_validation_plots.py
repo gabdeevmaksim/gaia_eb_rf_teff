@@ -181,8 +181,9 @@ def run_plots(model_id: str, model_dir: Path, paper_dir: Path) -> None:
     ax.set_yticks(y_pos)
     ax.set_yticklabels(sorted_features)
     ax.invert_yaxis()
-    ax.set_xlabel('Feature Importance', fontsize=14)
+    ax.set_xlabel('Feature importance', fontsize=14)
     ax.grid(True, alpha=0.3, axis='x')
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True)
 
     plt.tight_layout()
     fig.savefig(paper_dir / 'feature_importance.png', dpi=300, bbox_inches='tight')
@@ -212,16 +213,16 @@ def run_plots(model_id: str, model_dir: Path, paper_dir: Path) -> None:
     ax.plot(x, x * 1.1, 'k:', lw=1.5, alpha=0.7, label='±10%')
     ax.plot(x, x * 0.9, 'k:', lw=1.5, alpha=0.7)
 
-    ax.set_xlabel(r'$T_{\rm eff,\,true}$ (K)', fontsize=14)
-    ax.set_ylabel(r'$T_{\rm eff,\,predicted}$ (K)', fontsize=14)
+    ax.set_xlabel(r'$T_{\rm eff,\,true}$, K', fontsize=14)
+    ax.set_ylabel(r'$T_{\rm eff,\,predicted}$, K', fontsize=14)
     ax.legend(fontsize=12, loc='upper left')
     ax.grid(True, alpha=0.3)
     ax.set_xlim(data_min, data_max)
     ax.set_ylim(data_min, data_max)
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True)
 
-    # Remove left (y-axis) tick labels and ticks
-    ax.set_yticklabels([])
-    ax.tick_params(left=False)
+    # Remove left (y-axis) tick labels
+    ax.tick_params(axis='y', labelleft=False)
 
     # Colorbar without label
     cbar = plt.colorbar(hb, ax=ax)
@@ -242,10 +243,12 @@ def run_plots(model_id: str, model_dir: Path, paper_dir: Path) -> None:
 
     # Grayscale bars
     ax.bar(bin_stats_df['bin'], bin_stats_df['rmse'], color='0.5', edgecolor='black', linewidth=1.5)
-    ax.set_ylabel('RMSE (K)', fontsize=14)
-    ax.set_xlabel(r'$T_{\rm eff}$ (K)', fontsize=14)
+    ax.set_ylabel('RMSE, K', fontsize=14)
+    ax.set_xlabel(r'$T_{\rm eff}$, K', fontsize=14)
     ax.tick_params(axis='x', rotation=0)  # Horizontal labels
     ax.grid(True, alpha=0.3, axis='y')
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True)
+
 
     plt.tight_layout()
     fig.savefig(paper_dir / 'rmse_by_temperature_bar.png', dpi=300, bbox_inches='tight')
@@ -287,13 +290,14 @@ def run_plots(model_id: str, model_dir: Path, paper_dir: Path) -> None:
 
     ax.plot(bin_centers, rmse_values, linestyle='none', marker='o', markersize=4,
             markerfacecolor='0.5', markeredgecolor='black', markeredgewidth=1)
-    ax.set_ylabel('RMSE (K)', fontsize=14)
-    ax.set_xlabel(r'$T_{\rm eff}$ (K)', fontsize=14)
+    ax.set_ylabel('RMSE, K', fontsize=14)
+    ax.set_xlabel(r'$T_{\rm eff}$, K', fontsize=14)
     ax.grid(True, alpha=0.3)
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True)
 
     # Format x-axis to show major ticks every 2500K, range (2600, 21500)
     from matplotlib.ticker import MultipleLocator
-    ax.set_xlim(2600, 17500)
+    ax.set_xlim(2600, 18000)
     ax.xaxis.set_major_locator(MultipleLocator(2500))
 
     plt.tight_layout()
@@ -319,10 +323,12 @@ def run_plots(model_id: str, model_dir: Path, paper_dir: Path) -> None:
         alpha=0.4,
         edgecolors='none',
     )
-    ax.set_ylabel(r'$|T_{\rm eff,\,pred} - T_{\rm eff,\,true}|$ (K)', fontsize=14)
-    ax.set_xlabel(r'$T_{\rm eff,\,true}$ (K)', fontsize=14)
+    ax.set_ylabel(r'$|T_{\rm eff,\,pred} - T_{\rm eff,\,true}|$, K', fontsize=14)
+    ax.set_xlabel(r'$T_{\rm eff,\,true}$, K', fontsize=14)
     ax.grid(True, alpha=0.3)
     ax.set_xlim(2600, 18000)
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True)
+
     from matplotlib.ticker import MultipleLocator
     ax.xaxis.set_major_locator(MultipleLocator(2500))
 
@@ -342,10 +348,12 @@ def run_plots(model_id: str, model_dir: Path, paper_dir: Path) -> None:
 
     # Grayscale bars
     ax.bar(bin_stats_df['bin'], bin_stats_df['within_10'], color='0.5', edgecolor='black', linewidth=1.5)
-    ax.set_ylabel('Objects Within 10% (%)', fontsize=14)
-    ax.set_xlabel(r'$T_{\rm eff}$ (K)', fontsize=14)
+    ax.set_ylabel('Percentage of objects, %', fontsize=14)
+    ax.set_xlabel(r'$T_{\rm eff}$, K', fontsize=14)
     ax.tick_params(axis='x', rotation=0)  # Horizontal labels
     ax.grid(True, alpha=0.3, axis='y')
+    # Add inner ticks to both axes
+    ax.tick_params(axis='both', which='both', direction='in', top=True, right=True)
 
     # Set y-axis ticks every 10%
     from matplotlib.ticker import MultipleLocator

@@ -1,8 +1,8 @@
 Model: Gaia → Teff (Corrected, Optuna, GSP-Phot flag=1)
 ================================================================================
 
-Model ID: rf_gaia_teff_flag1_corrected_optuna_20260202_110400
-Timestamp: 20260202_110400
+Model ID: rf_gaia_teff_flag1_corrected_optuna_20260304_144922
+Timestamp: 20260304_144922
 Description: Temperature prediction using Gaia colors; polynomial correction for hot stars, Optuna optimization. Training data restricted to GSP-Phot Teff with quality flag = 1.
 
 Data Source: eb_unified_photometry.parquet
@@ -29,3 +29,9 @@ TOP 10 FEATURES:
    4. bp                             0.1254
    5. g                              0.0452
    6. rp                             0.0254
+
+PROBABILISTIC METRICS (5-component GMM):
+  CRPS mean:   161.5 K
+  CRPS median: 99.3 K
+  PIT mean:    0.465 (ideal=0.500)
+  PIT std:     0.432 (ideal~0.289)

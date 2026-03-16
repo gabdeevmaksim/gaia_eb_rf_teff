@@ -1,0 +1,73 @@
+{
+  "model_id": "rf_gaia_logg_optuna_20260305_174604",
+  "timestamp": "20260305_174604",
+  "model_name": "Gaia logg (Optuna-optimized)",
+  "description": "Surface gravity (logg) prediction using Gaia photometry with Optuna hyperparameter optimization",
+  "model_type": "RandomForestRegressor",
+  "n_features": 6,
+  "features": [
+    "g",
+    "bp",
+    "rp",
+    "bp_rp",
+    "g_bp",
+    "g_rp"
+  ],
+  "data_source": "eb_unified_photometry.parquet",
+  "target": "logg_gaia",
+  "target_transform": "none",
+  "train_metrics": {
+    "mae": 0.12594145330165474,
+    "rmse": 0.17580757650858073,
+    "r2": 0.7532497083078493,
+    "mean_relative_error": 2.922769000231598,
+    "within_5_percent": 84.30649641699937,
+    "within_10_percent": 96.7850944039368,
+    "within_20_percent": 99.50359083660811,
+    "n_samples": 1020932
+  },
+  "test_metrics": {
+    "mae": 0.13229079515785358,
+    "rmse": 0.1866118179681942,
+    "r2": 0.7226165980584458,
+    "mean_relative_error": 3.077350638461129,
+    "within_5_percent": 82.87022888800082,
+    "within_10_percent": 96.23169326970545,
+    "within_20_percent": 99.3942813261556,
+    "n_samples": 255234
+  },
+  "hyperparameters": {
+    "n_estimators": 500,
+    "max_depth": 15,
+    "min_samples_split": 10,
+    "min_samples_leaf": 4,
+    "max_features": "log2",
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": 0
+  },
+  "config_file": "config/models/gaia_logg_optuna.yaml",
+  "data_config": {
+    "source_file": "eb_unified_photometry.parquet",
+    "source_format": "parquet",
+    "source_location": "raw",
+    "target": "logg_gaia",
+    "features": [
+      "g",
+      "bp",
+      "rp",
+      "bp_rp",
+      "g_bp",
+      "g_rp"
+    ],
+    "id_column": "source_id"
+  },
+  "crps_stats": {
+    "mean": 0.11590780975798204,
+    "median": 0.08211406429811707
+  },
+  "pit_stats": {
+    "mean": 0.5713592136127427,
+    "std": 0.4512358235599154
+  }
+}

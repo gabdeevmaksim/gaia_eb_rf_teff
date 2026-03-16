@@ -16,6 +16,7 @@ teff_correction:
   enabled: true
   target_column: teff_gaia
   threshold: 10000
+  blend_width: 2000
   coefficients_file: teff_correction_coeffs_deg2.pkl
 
 target_transform: log

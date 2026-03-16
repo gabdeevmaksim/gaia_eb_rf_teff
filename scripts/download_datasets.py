@@ -37,8 +37,8 @@ def main():
     )
     parser.add_argument(
         "--datasets",
-        choices=["training", "catalog", "correction", "all"],
-        help="Dataset to download",
+        choices=["photometry", "predictions", "training", "correction", "all"],
+        help="Dataset: photometry (raw), predictions (eb_catalog_teff), training (=photometry), correction, all",
     )
     parser.add_argument(
         "--model",
@@ -68,17 +68,30 @@ def main():
     success = True
 
     if args.datasets:
-        if args.datasets == "correction":
-            output_dir = PROJECT_ROOT / "data"
-        elif args.datasets == "training":
-            # Input photometry: download to data/raw (pipeline input)
-            output_dir = PROJECT_ROOT / "data" / "raw"
+        if args.datasets == "all":
+            # Two datasets: photometry → raw, predictions → processed
+            if not download_from_huggingface("photometry", PROJECT_ROOT / "data" / "raw", PROJECT_ROOT):
+                success = False
+            if not download_from_huggingface("predictions", PROJECT_ROOT / "data" / "processed", PROJECT_ROOT):
+                success = False
+        elif args.datasets == "correction":
+            if not download_from_huggingface("correction", PROJECT_ROOT / "data", PROJECT_ROOT):
+                success = False
+        elif args.datasets in ("photometry", "training"):
+            if not download_from_huggingface(args.datasets, PROJECT_ROOT / "data" / "raw", PROJECT_ROOT):
+                success = False
+        elif args.datasets == "predictions":
+            output_dir = Path(args.output_data)
+            if not output_dir.is_absolute():
+                output_dir = PROJECT_ROOT / output_dir
+            if not download_from_huggingface("predictions", output_dir, PROJECT_ROOT):
+                success = False
         else:
             output_dir = Path(args.output_data)
             if not output_dir.is_absolute():
                 output_dir = PROJECT_ROOT / output_dir
-        if not download_from_huggingface(args.datasets, output_dir, PROJECT_ROOT):
-            success = False
+            if not download_from_huggingface(args.datasets, output_dir, PROJECT_ROOT):
+                success = False
 
     if args.model:
         out_models = Path(args.output_models)

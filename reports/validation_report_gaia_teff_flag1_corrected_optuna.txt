@@ -1,50 +1,56 @@
 Validation Report: Gaia → Teff (Corrected, Optuna, GSP-Phot flag=1)
 ================================================================================
 
-Model ID: rf_gaia_teff_flag1_corrected_optuna_20260130_131419
-Model File: /Users/wera/Max_astro/Slovakia/gaia_eb_rf_teff/models/rf_gaia_teff_flag1_corrected_optuna_20260130_131419.pkl
-Validation Date: 2026-01-30 15:04:20
+Model ID: rf_gaia_teff_flag1_corrected_optuna_20260304_144922
+Model File: /Users/wera/Max_astro/Slovakia/gaia_eb_rf_teff/models/rf_gaia_teff_flag1_corrected_optuna_20260304_144922.pkl
+Validation Date: 2026-03-04 15:39:28
 
 Test Set: 142,334 samples
 
 OVERALL PERFORMANCE:
-  MAE:  191.5648 K
-  RMSE: 282.8773 K
-  R²:   0.9069
-  Mean Relative Error: 4.01%
+  MAE:  191.0121 K
+  RMSE: 283.3629 K
+  R²:   0.9066
+  Mean Relative Error: 3.98%
 
 ACCURACY THRESHOLDS:
-  Within  5%: 71.0%
-  Within 10%: 90.8%
+  Within  5%: 71.2%
+  Within 10%: 91.0%
   Within 20%: 99.6%
 
 PERFORMANCE BY TEMPERATURE RANGE:
 
   [0.00 - 4000.00] K (n=15,927):
-    MAE:  237.1286 K
-    RMSE: 303.2919 K
-    R²:   -2.7990
+    MAE:  226.7939 K
+    RMSE: 291.5524 K
+    R²:   -2.5106
 
   [4000.00 - 5000.00] K (n=71,609):
-    MAE:  173.3481 K
-    RMSE: 236.2042 K
-    R²:   0.2626
+    MAE:  172.5703 K
+    RMSE: 235.8235 K
+    R²:   0.2650
 
   [5000.00 - 6000.00] K (n=45,784):
-    MAE:  188.2832 K
-    RMSE: 274.2038 K
-    R²:   -0.0091
+    MAE:  191.1296 K
+    RMSE: 279.5427 K
+    R²:   -0.0488
 
   [6000.00 - 8000.00] K (n=7,749):
-    MAE:  228.1003 K
-    RMSE: 384.7337 K
-    R²:   0.1095
+    MAE:  228.0245 K
+    RMSE: 379.5282 K
+    R²:   0.1334
 
   [8000.00 - 50000.00] K (n=1,265):
-    MAE:  544.0683 K
-    RMSE: 1029.1408 K
-    R²:   0.8779
+    MAE:  553.4696 K
+    RMSE: 1051.4430 K
+    R²:   0.8725
+
+PROBABILISTIC METRICS (5-component GMM):
+  CRPS mean:   161.5 K
+  CRPS median: 99.3 K
+  PIT mean:    0.465 (ideal=0.500)
+  PIT std:     0.432 (ideal~0.289)
 
 VALIDATION PLOTS:
   Location: reports/figures/gaia_teff_flag1_corrected_optuna_validation/
-  Number of plots: 8
+  Number of plots: 11

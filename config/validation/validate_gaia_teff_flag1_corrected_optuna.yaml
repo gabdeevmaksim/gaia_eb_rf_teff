@@ -10,6 +10,8 @@ plots:
   performance_by_temp: true
   temp_distributions: true
   feature_importance: true
+  pit_histogram: true
+  crps_distribution: true
   color_temp_relations: true
   color_columns:
     - column: bp_rp

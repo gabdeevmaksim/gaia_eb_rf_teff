@@ -23,24 +23,28 @@ def download_from_huggingface_impl(
     if hf_hub_download is None or snapshot_download is None:
         raise ImportError("huggingface_hub is required. pip install huggingface_hub")
 
+    # Two datasets on Hub: photometry (original) and predictions (eb_catalog_teff)
     datasets = {
-        "training": [
+        "photometry": [
             "photometry/eb_unified_photometry.parquet",
             "photometry/eb_unified_photometry_SUMMARY.txt",
         ],
-        "catalog": [
-            "catalogs/stars_types_with_best_predictions.fits",
-            "catalogs/stars_types_with_best_predictions_DESCRIPTION.txt",
+        "predictions": [
+            "predictions/eb_catalog_teff.parquet",
+            "predictions/eb_catalog_teff_SUMMARY.txt",
+        ],
+        "training": [  # alias: same as photometry (download to data/raw)
+            "photometry/eb_unified_photometry.parquet",
+            "photometry/eb_unified_photometry_SUMMARY.txt",
         ],
         "correction": [
             "correction/teff_correction_coeffs_deg2.pkl",
         ],
         "all": [
-            "photometry/*.parquet",
-            "photometry/*.txt",
-            "catalogs/*.fits",
-            "catalogs/*.txt",
-            "correction/*.pkl",
+            "photometry/eb_unified_photometry.parquet",
+            "photometry/eb_unified_photometry_SUMMARY.txt",
+            "predictions/eb_catalog_teff.parquet",
+            "predictions/eb_catalog_teff_SUMMARY.txt",
         ],
     }
 
