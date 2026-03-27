@@ -399,12 +399,31 @@ class MakePredictionsStep(PipelineStep):
         model = context['model']
         metadata = context['model_metadata']
         pred_config = context['prediction_config']
+        config = context['config']
 
         # Get feature columns from model metadata
         required_features = metadata.get('features', [])
 
         if not required_features:
             raise ValueError("Model metadata missing 'features' - cannot determine which columns to use")
+
+        # Apply categorical encoding if model was trained with encoded categoricals
+        encoder_path = metadata.get('categorical_encoder_path')
+        cat_columns = metadata.get('categorical_columns_encoded', [])
+        if encoder_path and cat_columns:
+            models_dir = Path(config.get_path('models'))
+            encoder_file = models_dir / encoder_path
+            if encoder_file.exists():
+                encoder = joblib.load(encoder_file)
+                to_encode = [c for c in cat_columns if c in df.columns]
+                if to_encode:
+                    self.logger.info(f"Applying categorical encoding to: {to_encode}")
+                    df_pd = df.to_pandas()
+                    enc_arr = encoder.transform(df_pd[to_encode])
+                    new_cols = encoder.get_feature_names_out(to_encode).tolist()
+                    df_pd = df_pd.drop(columns=to_encode)
+                    df_pd[new_cols] = enc_arr
+                    df = pl.from_pandas(df_pd)
 
         # Check which features are available
         available_features = [f for f in required_features if f in df.columns]

@@ -1,0 +1,106 @@
+# Gaia Teff with EB parameters, E(B-V), and model_type (categorical)
+# Features: Gaia photometry + ebv_sandf, global_ranking, frequency,
+#           geom_model_reference_level, model_type (one-hot encoded)
+
+model:
+  name: Gaia Teff with EB params and E(B-V) (Corrected, Log, Optuna)
+  id_prefix: rf_gaia_teff_eb_params_optuna
+  description: Temperature prediction using Gaia colors, extinction (ebv_sandf),
+    EB parameters (global_ranking, frequency, geom_model_reference_level),
+    and model type (categorical). Teff correction and log target.
+
+teff_correction:
+  enabled: true
+  target_column: teff_gaia
+  threshold: 10000
+  blend_width: 2000
+  coefficients_file: teff_correction_coeffs_deg2.pkl
+
+target_transform: log
+
+data:
+  source_file: eb_unified_photometry.parquet
+  source_format: parquet
+  source_location: raw
+  target: teff_gaia_corrected
+  features:
+    # Gaia photometry
+    - g
+    - bp
+    - rp
+    - bp_rp
+    - g_bp
+    - g_rp
+    # Extinction
+    - ebv_sandf
+    # EB model parameters
+    - global_ranking
+    - frequency
+    - geom_model_reference_level
+    - model_type
+  id_column: source_id
+
+preprocessing:
+  missing_value: -999.0
+  drop_missing: true
+  encode_categorical: ["model_type"]
+  categorical_encoding: "onehot"
+
+training:
+  test_size: 0.2
+  random_state: 42
+
+optuna_optimization:
+  enabled: true
+  # Use successive halving to scale rows up gradually (memory-stable).
+  method: halving              # optuna | halving
+  # Halving settings
+  factor: 3                    # keep top 1/factor each iteration
+  resource: n_samples          # progressively increase number of rows
+  max_resources: auto          # scale up to full training set at the end
+  min_resources: 3000          # start with a reasonable sample size (6 is too small)
+  n_candidates: 300            # test 300 random parameter combinations
+  cv: 3
+  n_jobs: 2                    # limit parallelism to avoid OOM on 16GB VM
+  rf_n_jobs: 1                 # RF internal parallelism (keep low to avoid RAM spikes)
+  scoring: neg_mean_absolute_error
+  # Optuna-only settings (ignored when method=halving)
+  n_trials: 150
+  timeout: null
+  search_space:
+    n_estimators: [300, 800, 20]
+    max_depth: [15, 40]
+    min_samples_split: [2, 10]
+    min_samples_leaf: [1, 2]
+    max_features: [sqrt, 0.8, 1.0]
+
+hyperparameters:
+  n_estimators: 400
+  max_depth: 18
+  min_samples_split: 5
+  min_samples_leaf: 2
+  max_features: sqrt
+  random_state: 42
+  n_jobs: -1
+  verbose: 0
+
+feature_engineering:
+  enabled: false
+
+clustering:
+  enabled: false
+
+output:
+  save_model: true
+  save_predictions: true
+  save_test_predictions: true
+  models_dir: models
+  predictions_dir: data/predictions
+
+validation:
+  create_plots: true
+  n_temp_bins: 5
+  target_info:
+    name: Temperature
+    unit: K
+    short: Teff

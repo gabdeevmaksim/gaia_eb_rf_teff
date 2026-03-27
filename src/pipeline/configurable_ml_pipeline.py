@@ -27,10 +27,12 @@ import polars as pl
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.experimental import enable_halving_search_cv  # noqa: F401
+from sklearn.model_selection import HalvingRandomSearchCV
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, OrdinalEncoder
 from sklearn.cluster import KMeans
 
 try:
@@ -78,6 +80,10 @@ def _generate_model_signature(model_config: Dict[str, Any]) -> str:
     # Preprocessing
     preprocess_config = model_config.get('preprocessing', {})
     signature_parts.append(f"missing_value:{preprocess_config.get('missing_value', -999.0)}")
+    enc_cat = preprocess_config.get('encode_categorical', [])
+    if enc_cat:
+        signature_parts.append(f"encode_categorical:{','.join(sorted(enc_cat))}")
+        signature_parts.append(f"categorical_encoding:{preprocess_config.get('categorical_encoding', 'onehot')}")
     filters = preprocess_config.get('filters', {})
     if filters:
         # Sort filters for consistency
@@ -108,13 +114,29 @@ def _generate_model_signature(model_config: Dict[str, Any]) -> str:
     signature_parts.append(f"test_size:{training_config.get('test_size', 0.2)}")
     signature_parts.append(f"random_state:{training_config.get('random_state', 42)}")
     
-    # Optuna settings (affect optimization outcome / cache validity)
+    # Hyperparameter optimization settings (affect outcome / cache validity)
     optuna_config = model_config.get('optuna_optimization', {})
+    signature_parts.append(f"optuna_method:{optuna_config.get('method', 'optuna')}")
     signature_parts.append(f"optuna_n_trials:{optuna_config.get('n_trials', 50)}")
     if optuna_config.get('max_samples') is not None:
         signature_parts.append(f"optuna_max_samples:{optuna_config['max_samples']}")
+    if optuna_config.get('rf_n_jobs') is not None:
+        signature_parts.append(f"optuna_rf_n_jobs:{optuna_config['rf_n_jobs']}")
     if optuna_config.get('stop_if_no_improvement_for') is not None:
         signature_parts.append(f"optuna_stop_patience:{optuna_config['stop_if_no_improvement_for']}")
+    # Successive halving options (used when method == 'halving')
+    for key in [
+        'factor',
+        'cv',
+        'n_candidates',
+        'resource',
+        'min_resources',
+        'max_resources',
+        'scoring',
+        'n_jobs',
+    ]:
+        if optuna_config.get(key) is not None:
+            signature_parts.append(f"halving_{key}:{optuna_config.get(key)}")
     search_space = optuna_config.get('search_space')
     if search_space:
         signature_parts.append(f"search_space:{json.dumps(search_space, sort_keys=True)}")
@@ -389,41 +411,35 @@ class PreprocessDataStep(PipelineStep):
             else:
                 # Convert to pandas for more robust -999 replacement, then back to polars
                 df_pd = df.to_pandas()
-                
-                # Count missing values before replacement
+                # Only apply numeric missing_value check/replace; skip categorical (e.g. model_type)
+                cols_numeric = [c for c in cols_to_check if c in df_pd.columns and pd.api.types.is_numeric_dtype(df_pd[c])]
+
+                # Count missing values before replacement (numeric columns only)
                 missing_count = 0
-                for col in cols_to_check:
-                    if col in df_pd.columns:
-                        # Check for exact match and also for values very close to missing_value (handles float precision issues)
-                        col_missing = ((df_pd[col] == missing_value) | (np.abs(df_pd[col] - missing_value) < 1e-6)).sum()
-                        missing_count += col_missing
-                
+                for col in cols_numeric:
+                    col_missing = ((df_pd[col] == missing_value) | (np.abs(df_pd[col] - missing_value) < 1e-6)).sum()
+                    missing_count += col_missing
+
                 if missing_count > 0:
                     self.logger.info(f"Found {missing_count:,} missing value indicators ({missing_value}) in target and features")
-                    for col in cols_to_check:
-                        if col in df_pd.columns:
-                            # Replace missing value indicator with NaN (handles both exact match and close values)
-                            df_pd[col] = df_pd[col].replace(missing_value, np.nan)
-                            # Also replace values very close to missing_value
-                            close_mask = np.abs(df_pd[col] - missing_value) < 1e-6
-                            if close_mask.any():
-                                df_pd.loc[close_mask, col] = np.nan
-                    
+                    for col in cols_numeric:
+                        df_pd[col] = df_pd[col].replace(missing_value, np.nan)
+                        close_mask = np.abs(df_pd[col].astype(float) - missing_value) < 1e-6
+                        if close_mask.any():
+                            df_pd.loc[close_mask, col] = np.nan
                     df = pl.from_pandas(df_pd)
-                    
-                    # Drop nulls in target and features
-                    df = df.drop_nulls(subset=cols_to_check)
-                    removed = before - len(df)
-                    self.logger.info(f"Replaced {missing_value} with NaN and dropped {removed:,} rows with missing values")
                 else:
-                    # Still check for existing NaN values
                     df = pl.from_pandas(df_pd)
-                    df = df.drop_nulls(subset=cols_to_check)
-                    removed = before - len(df)
-                    if removed > 0:
-                        self.logger.info(f"Dropped {removed:,} rows with NaN values")
-                    else:
-                        self.logger.info("No missing values found")
+
+                # Drop nulls in target and all features (including categorical)
+                df = df.drop_nulls(subset=cols_to_check)
+                removed = before - len(df)
+                if removed > 0:
+                    self.logger.info(f"Dropped {removed:,} rows with missing values")
+                elif missing_count > 0:
+                    self.logger.info("Replaced missing value indicators with NaN")
+                else:
+                    self.logger.info("No missing values found")
 
         self.logger.info(f"After preprocessing: {len(df):,} samples")
 
@@ -623,6 +639,78 @@ class PrepareTrainTestFromConfigStep(PipelineStep):
         context['y_train'] = y_train
         context['y_test'] = y_test
         context['feature_cols'] = feature_cols
+
+        return context
+
+
+class EncodeCategoricalStep(PipelineStep):
+    """Encode categorical features for training (fit on train, transform train and test)."""
+
+    def __init__(self):
+        super().__init__("Encode Categorical")
+
+    def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        model_config = context['model_config']
+        encode_cols = model_config.get('preprocessing', {}).get('encode_categorical', [])
+        if not encode_cols:
+            self.logger.info("No categorical columns to encode (preprocessing.encode_categorical empty)")
+            return context
+
+        X_train = context['X_train']
+        X_test = context['X_test']
+        feature_cols = list(context['feature_cols'])
+        encoding = model_config.get('preprocessing', {}).get('categorical_encoding', 'onehot')
+
+        # Only encode columns that exist in features
+        to_encode = [c for c in encode_cols if c in feature_cols]
+        if not to_encode:
+            self.logger.warning(
+                f"encode_categorical {encode_cols} has no overlap with feature_cols; skipping"
+            )
+            return context
+
+        if encoding == 'onehot':
+            encoder = OneHotEncoder(
+                handle_unknown='ignore',
+                drop=None,
+                sparse_output=False,
+            )
+        else:
+            encoder = OrdinalEncoder(
+                handle_unknown='use_encoded_value',
+                unknown_value=-1,
+            )
+
+        # Fit on training data only
+        encoder.fit(X_train[to_encode])
+        new_cols = encoder.get_feature_names_out(to_encode).tolist()
+
+        # Transform train and test
+        train_enc = encoder.transform(X_train[to_encode])
+        test_enc = encoder.transform(X_test[to_encode])
+
+        # Build new feature matrices: drop encoded columns, add encoded columns
+        drop_cols = [c for c in feature_cols if c in to_encode]
+        keep_cols = [c for c in feature_cols if c not in to_encode]
+        new_feature_cols = keep_cols + new_cols
+
+        X_train_new = X_train[keep_cols].copy()
+        X_train_new[new_cols] = train_enc
+        X_test_new = X_test[keep_cols].copy()
+        X_test_new[new_cols] = test_enc
+
+        # Preserve column order for downstream steps
+        X_train_new = X_train_new[new_feature_cols]
+        X_test_new = X_test_new[new_feature_cols]
+
+        context['X_train'] = X_train_new
+        context['X_test'] = X_test_new
+        context['feature_cols'] = new_feature_cols
+        context['categorical_encoder'] = encoder
+        context['categorical_columns_encoded'] = to_encode
+
+        self.logger.info(f"Encoded categorical columns: {to_encode} -> {new_cols} ({encoding})")
+        self.logger.info(f"Features after encoding: {len(new_feature_cols)}")
 
         return context
 
@@ -944,6 +1032,7 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
     def _optimize_with_optuna(self, X_train: pd.DataFrame, y_train: pd.Series, 
                               sample_weights: Optional[np.ndarray] = None,
                               max_samples: Optional[int] = None,
+                              rf_n_jobs: int = -1,
                               n_trials: Optional[int] = None,
                               timeout: Optional[float] = None,
                               stop_if_no_improvement_for: Optional[int] = None,
@@ -1039,7 +1128,7 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
             min_samples_leaf = trial.suggest_int('min_samples_leaf', msl_low, msl_high, step=msl_step)
             max_features = trial.suggest_categorical('max_features', max_feat_choices)
             
-            # Train model
+            # Train model (rf_n_jobs=1 during Optuna reduces memory; full training still uses n_jobs=-1)
             model = RandomForestRegressor(
                 n_estimators=n_estimators,
                 max_depth=max_depth,
@@ -1047,7 +1136,7 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
                 min_samples_leaf=min_samples_leaf,
                 max_features=max_features,
                 random_state=42,
-                n_jobs=-1,
+                n_jobs=rf_n_jobs,
                 verbose=0
             )
             
@@ -1125,6 +1214,87 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
             if param not in ['random_state', 'n_jobs', 'verbose']:
                 self.logger.info(f"  {param}: {value}")
         return best_params
+
+    def _optimize_with_halving(
+        self,
+        X_train: pd.DataFrame,
+        y_train: pd.Series,
+        *,
+        sample_weights: Optional[np.ndarray] = None,
+        rf_n_jobs: int = 1,
+        factor: int = 3,
+        cv: int = 3,
+        n_candidates: Any = "exhaust",
+        resource: str = "n_samples",
+        # sklearn constraint: n_candidates and min_resources cannot both be 'exhaust'
+        min_resources: Any = "smallest",
+        max_resources: Any = "auto",
+        scoring: str = "neg_mean_absolute_error",
+        n_jobs: int = -1,
+        search_space: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Successive-halving hyperparameter search using HalvingRandomSearchCV.
+
+        This approach scales the number of training rows up across iterations
+        (resource='n_samples'), which is usually much more memory-stable than
+        training full-size forests for every candidate.
+        """
+        space = search_space or {}
+
+        def _as_list(key: str, default: List[Any]) -> List[Any]:
+            val = space.get(key)
+            if val is None:
+                return default
+            if isinstance(val, list) and len(val) in (2, 3) and isinstance(val[0], int) and isinstance(val[1], int):
+                low, high = int(val[0]), int(val[1])
+                step = int(val[2]) if len(val) == 3 else (50 if key == "n_estimators" else 1)
+                step = max(step, 1)
+                return list(range(low, high + 1, step))
+            if isinstance(val, list):
+                return val
+            return default
+
+        param_dist = {
+            "n_estimators": _as_list("n_estimators", list(range(100, 1001, 50))),
+            "max_depth": _as_list("max_depth", list(range(5, 51, 1))),
+            "min_samples_split": _as_list("min_samples_split", list(range(2, 21, 1))),
+            "min_samples_leaf": _as_list("min_samples_leaf", list(range(1, 11, 1))),
+            "max_features": _as_list("max_features", ["sqrt", "log2", None]),
+        }
+
+        rf = RandomForestRegressor(random_state=42, n_jobs=rf_n_jobs, verbose=0)
+
+        search = HalvingRandomSearchCV(
+            estimator=rf,
+            param_distributions=param_dist,
+            n_candidates=n_candidates,
+            factor=factor,
+            resource=resource,
+            min_resources=min_resources,
+            max_resources=max_resources,
+            cv=cv,
+            scoring=scoring,
+            n_jobs=n_jobs,
+            random_state=42,
+            verbose=3,
+        )
+
+        if sample_weights is not None:
+            search.fit(X_train, y_train, sample_weight=sample_weights)
+        else:
+            search.fit(X_train, y_train)
+
+        best_params = dict(search.best_params_)
+        best_params["random_state"] = 42
+        best_params["n_jobs"] = -1  # full training still uses full parallelism
+        best_params["verbose"] = 0
+
+        if best_params.get("max_features") is None:
+            best_params["max_features"] = "sqrt"
+
+        self.logger.info(f"Halving search best score ({scoring}): {search.best_score_}")
+        return best_params
     
     def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
         model_config = context['model_config']
@@ -1166,12 +1336,19 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
                 "the pipeline (Ctrl+C), set 'optuna_optimization.enabled: false' "
                 "in the config file, and re-run to use the hyperparameters block directly."
             )
-        self.logger.info("Proceeding with Optuna optimization...")
+        method = optuna_config.get('method', 'optuna')
+        if method not in ('optuna', 'halving'):
+            raise ValueError(
+                f"Unknown optuna_optimization.method: {method} (expected 'optuna' or 'halving')"
+            )
+        self.logger.info(f"Proceeding with hyperparameter optimization (method={method})...")
         
         # Get optimization settings from config
         n_trials = optuna_config.get('n_trials', self.n_trials)
         timeout = optuna_config.get('timeout', self.timeout)
         max_samples = optuna_config.get('max_samples')  # None = use full data; int = subsample for Optuna only
+        # Default rf_n_jobs: optuna uses -1 by default; halving uses 1 by default (lower memory)
+        rf_n_jobs = optuna_config.get('rf_n_jobs', 1 if method == 'halving' else -1)
         stop_if_no_improvement_for = optuna_config.get('stop_if_no_improvement_for')  # int or None
         
         # Report path: reports/optuna_reports/optuna_<id_prefix>_<timestamp>.txt
@@ -1183,17 +1360,36 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
         report_path = optuna_reports_dir / f"optuna_{id_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         
         search_space = optuna_config.get('search_space')
-        result = self._optimize_with_optuna(
-            X_train, y_train, sample_weights,
-            max_samples=max_samples,
-            n_trials=n_trials,
-            timeout=timeout,
-            stop_if_no_improvement_for=stop_if_no_improvement_for,
-            report_path=report_path,
-            id_prefix=id_prefix,
-            signature=signature,
-            search_space=search_space
-        )
+        if method == 'halving':
+            # Successive halving handles resource ramp-up itself; ignore Optuna-specific settings.
+            result = self._optimize_with_halving(
+                X_train,
+                y_train,
+                sample_weights=sample_weights,
+                rf_n_jobs=rf_n_jobs,
+                factor=int(optuna_config.get('factor', 3)),
+                cv=int(optuna_config.get('cv', 3)),
+                n_candidates=optuna_config.get('n_candidates', 'exhaust'),
+                resource=optuna_config.get('resource', 'n_samples'),
+                min_resources=optuna_config.get('min_resources', 'smallest'),
+                max_resources=optuna_config.get('max_resources', 'auto'),
+                scoring=optuna_config.get('scoring', 'neg_mean_absolute_error'),
+                n_jobs=int(optuna_config.get('n_jobs', -1)),
+                search_space=search_space,
+            )
+        else:
+            result = self._optimize_with_optuna(
+                X_train, y_train, sample_weights,
+                max_samples=max_samples,
+                rf_n_jobs=rf_n_jobs,
+                n_trials=n_trials,
+                timeout=timeout,
+                stop_if_no_improvement_for=stop_if_no_improvement_for,
+                report_path=report_path,
+                id_prefix=id_prefix,
+                signature=signature,
+                search_space=search_space
+            )
         
         # Handle interrupt: save best to cache, log, then exit
         if isinstance(result, tuple):
@@ -1514,6 +1710,15 @@ class SaveModelFromConfigStep(PipelineStep):
             metadata['teff_correction']['target_column'] = model_config.get('teff_correction', {}).get('target_column', 'teff_gaia')
             metadata['teff_correction']['corrected_column'] = context.get('teff_correction_column', 'unknown')
 
+        # Save categorical encoder if used
+        if context.get('categorical_encoder') is not None:
+            encoder_file = models_dir / f"{model_id}_categorical_encoder.pkl"
+            joblib.dump(context['categorical_encoder'], encoder_file)
+            metadata['categorical_encoder_path'] = encoder_file.name
+            metadata['categorical_columns_encoded'] = context.get('categorical_columns_encoded', [])
+            metadata['categorical_encoding'] = model_config.get('preprocessing', {}).get('categorical_encoding', 'onehot')
+            self.logger.info(f"✓ Saved categorical encoder: {encoder_file.name}")
+
         metadata_file = models_dir / f"{model_id}_metadata.json"
         with open(metadata_file, 'w') as f:
             json.dump(metadata, f, indent=2)
@@ -1680,6 +1885,7 @@ class ConfigurableMLPipeline(Pipeline):
             PreprocessDataStep(),
             EngineerFeaturesFromConfigStep(),
             PrepareTrainTestFromConfigStep(),
+            EncodeCategoricalStep(),
             AddClusteringFeaturesStep(),
             OptunaOptimizeHyperparametersStep(),  # Optimize hyperparameters before training
             TrainModelFromConfigStep(),

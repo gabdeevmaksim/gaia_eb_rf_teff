@@ -95,6 +95,25 @@ preprocessing:
   # Drop missing values (optional, default: true)
   drop_missing: true                          # Drop rows with missing values in target/features
   
+  # -------------------------------------------------------------------------
+  # Categorical encoding (optional)
+  # -------------------------------------------------------------------------
+  # Encode categorical (string or label) columns before training. The encoder
+  # is fit on the training set only and applied to both train and test; the
+  # same encoder is saved with the model and applied automatically at
+  # prediction time.
+  #
+  # - encode_categorical: list of column names to encode (e.g. ["model_type"]).
+  #   These columns must be included in data.features.
+  # - categorical_encoding: "onehot" or "ordinal"
+  #   - onehot: one binary column per category; no order assumed. Use for
+  #     nominal variables (e.g. model type, instrument). Unseen categories
+  #     at prediction time are ignored (all one-hot columns set to 0).
+  #   - ordinal: one integer column; use when categories have a natural order.
+  #     Unseen categories are mapped to -1.
+  encode_categorical: []                      # e.g. ["model_type"]
+  categorical_encoding: "onehot"              # onehot | ordinal
+  
   # Sample weights (optional)
   use_sample_weights: false                   # Enable sample weights for training
   weight_column: "sample_weight"              # Column name with sample weights
@@ -144,8 +163,33 @@ training:
 # Automatically finds best hyperparameters and caches them for reuse
 optuna_optimization:
   enabled: false                               # Enable Optuna optimization
+  # Hyperparameter optimization method:
+  # - optuna: classic Optuna trials (default)
+  # - halving: successive halving (HalvingRandomSearchCV) that ramps up rows
+  #            gradually (resource='n_samples') and is typically more RAM-stable
+  method: "optuna"                             # optuna | halving
   n_trials: 50                                 # Number of optimization trials
   timeout: null                                # Max time in seconds (null = no limit)
+  
+  # Memory-saving (optional): use if Optuna runs out of memory
+  # max_samples: 200000                        # Subsample for Optuna only; final training uses full data
+  # rf_n_jobs: 1                               # 1 = one tree at a time (low memory); -1 = all cores
+
+  # -------------------------------------------------------------------------
+  # Successive halving options (used when method: halving)
+  # -------------------------------------------------------------------------
+  # Note: Halving manages memory by controlling how many training rows are used
+  # early, and only uses the full dataset near the end for the best candidates.
+  #
+  # factor: 3                    # keep top 1/factor each iteration
+  # resource: n_samples          # progressively increase number of rows
+  # max_resources: auto          # scale up to full training set at the end
+  # min_resources: smallest     # start from the smallest feasible subset
+  # n_candidates: exhaust        # let sklearn decide initial candidates
+  # cv: 3                        # CV folds (higher = more stable, slower)
+  # n_jobs: -1                   # parallelism for the search (CV/candidates)
+  # rf_n_jobs: 1                 # RF internal parallelism (keep low to avoid RAM spikes)
+  # scoring: neg_mean_absolute_error
   
   # Optional: restrict search to a specific hyperparameter region (omit for full default ranges)
   # search_space:
@@ -250,11 +294,12 @@ hyperparameter_cache:
 # 4. Preprocess Data (filters, missing values)
 # 5. Engineer Features (if enabled, creates polynomial/interaction features)
 # 6. Prepare Train/Test Split (with target transformation if specified)
-# 7. Add Clustering Features (if enabled, adds cluster probabilities)
-# 8. Optimize Hyperparameters (if enabled, runs Optuna)
-# 9. Train Model (Random Forest with optimized/default hyperparameters)
-# 10. Evaluate Model (calculates metrics on train and test sets)
-# 11. Save Model (saves model, metadata, predictions, and plots)
+# 7. Encode Categorical (if encode_categorical set, one-hot or ordinal encode)
+# 8. Add Clustering Features (if enabled, adds cluster probabilities)
+# 9. Optimize Hyperparameters (if enabled, runs Optuna)
+# 10. Train Model (Random Forest with optimized/default hyperparameters)
+# 11. Evaluate Model (calculates metrics on train and test sets)
+# 12. Save Model (saves model, metadata, predictions, and plots)
 
 # ============================================================================
 # NOTES

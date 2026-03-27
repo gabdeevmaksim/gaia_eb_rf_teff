@@ -142,3 +142,15 @@ be025053aef2a324:
     verbose: 0
   optimized_at: '2026-03-05T17:32:59.111627'
   n_trials: 150
+88e0277b342f3b01:
+  hyperparameters:
+    n_estimators: 720
+    max_depth: 26
+    min_samples_split: 9
+    min_samples_leaf: 2
+    max_features: 0.8
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-03-24T12:35:40.247524'
+  n_trials: 150
