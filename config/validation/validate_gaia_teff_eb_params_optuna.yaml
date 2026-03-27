@@ -1,3 +1,35 @@
+# Validation configuration for Gaia → Teff (EB params + E(B-V), Corrected, Log, Optuna)
+# Run: python pipeline.py --validate --val-config config/validation/validate_gaia_teff_eb_params_optuna.yaml
+
+model:
+  model_pattern: "rf_gaia_teff_eb_params_optuna_*"
+
+plots:
+  test_scatter: true
+  residuals: true
+  performance_by_temp: true
+  temp_distributions: true
+  feature_importance: true
+  pit_histogram: true
+  crps_distribution: true
+  color_temp_relations: true
+  color_columns:
+    - column: bp_rp
+      label: "BP - RP"
+    - column: g_bp
+      label: "G - BP"
+    - column: g_rp
+      label: "G - RP"
+
+output:
+  figures_subdir: "gaia_teff_eb_params_optuna_validation"
+  report_file: "reports/validation_report_gaia_teff_eb_params_optuna.txt"
+
+target_info:
+  name: "Temperature"
+  unit: "K"
+  short: "Teff"
+
 # Validation configuration for Gaia Teff with EB params and E(B-V)
 # Run: python pipeline.py --validate --val-config config/validation/validate_gaia_teff_eb_params_optuna.yaml
 

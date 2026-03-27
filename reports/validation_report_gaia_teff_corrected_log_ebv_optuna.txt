@@ -1,0 +1,56 @@
+Validation Report: Gaia Teff (Corrected, Log, +EBV, Optuna)
+================================================================================
+
+Model ID: rf_gaia_teff_corrected_log_ebv_optuna_20260316_203353
+Model File: /Users/wera/Max_astro/Slovakia/gaia_eb_rf_teff/models/rf_gaia_teff_corrected_log_ebv_optuna_20260316_203353.pkl
+Validation Date: 2026-03-16 21:08:56
+
+Test Set: 255,234 samples
+
+OVERALL PERFORMANCE:
+  MAE:  530.9343 K
+  RMSE: 1085.5913 K
+  R²:   0.6977
+  Mean Relative Error: 8.35%
+
+ACCURACY THRESHOLDS:
+  Within  5%: 50.6%
+  Within 10%: 72.3%
+  Within 20%: 89.7%
+
+PERFORMANCE BY TEMPERATURE RANGE:
+
+  [0.00 - 4000.00] K (n=26,745):
+    MAE:  298.0056 K
+    RMSE: 521.1821 K
+    R²:   -11.0902
+
+  [4000.00 - 5000.00] K (n=101,138):
+    MAE:  282.3556 K
+    RMSE: 453.0168 K
+    R²:   -1.6721
+
+  [5000.00 - 6000.00] K (n=71,296):
+    MAE:  370.4082 K
+    RMSE: 522.8937 K
+    R²:   -2.4729
+
+  [6000.00 - 8000.00] K (n=37,971):
+    MAE:  665.1358 K
+    RMSE: 925.1860 K
+    R²:   -1.6055
+
+  [8000.00 - 50000.00] K (n=18,084):
+    MAE:  2616.7301 K
+    RMSE: 3494.0711 K
+    R²:   0.1941
+
+PROBABILISTIC METRICS (5-component GMM):
+  CRPS mean:   410.9 K
+  CRPS median: 171.2 K
+  PIT mean:    0.442 (ideal=0.500)
+  PIT std:     0.392 (ideal~0.289)
+
+VALIDATION PLOTS:
+  Location: reports/figures/gaia_teff_corrected_log_ebv_optuna_validation/
+  Number of plots: 11

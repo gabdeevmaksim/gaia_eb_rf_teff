@@ -26,7 +26,7 @@ try:
 except ImportError:
     pass
 
-from src.huggingface import download_from_huggingface, download_model
+from src.huggingface import download_from_huggingface, download_model  # noqa: E402
 
 
 def main():
@@ -69,10 +69,12 @@ def main():
 
     if args.datasets:
         if args.datasets == "all":
-            # Two datasets: photometry → raw, predictions → processed
+            # photometry → raw, predictions → processed, correction → data/
             if not download_from_huggingface("photometry", PROJECT_ROOT / "data" / "raw", PROJECT_ROOT):
                 success = False
             if not download_from_huggingface("predictions", PROJECT_ROOT / "data" / "processed", PROJECT_ROOT):
+                success = False
+            if not download_from_huggingface("correction", PROJECT_ROOT / "data", PROJECT_ROOT):
                 success = False
         elif args.datasets == "correction":
             if not download_from_huggingface("correction", PROJECT_ROOT / "data", PROJECT_ROOT):
