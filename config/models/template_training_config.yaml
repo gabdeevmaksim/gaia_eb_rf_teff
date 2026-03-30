@@ -156,6 +156,22 @@ feature_engineering:
 training:
   test_size: 0.2                              # Fraction of data for test set (0.0-1.0)
   random_state: 42                             # Random seed for reproducibility
+  
+  # -------------------------------------------------------------------------
+  # Stratified train/test split (optional)
+  # -------------------------------------------------------------------------
+  # Bin the target into N quantile bins and stratify train/test so both sets
+  # have the same proportion in each bin.  Useful when the target distribution
+  # is heavily skewed (e.g. few hot stars vs. many cool stars).
+  # Set to null or 0 to disable.  Typical value: 10.
+  stratify_target_bins: null                  # e.g. 10 for 10 quantile bins
+  
+  # Additionally stratify on categorical columns (optional, list).
+  # Creates combined strata: (target_bin x column1 x column2 ...).
+  # Falls back to target-bins-only if any combined stratum is too small,
+  # then to random split if bins-only is also too small.
+  # Columns listed here do NOT need to be in data.features.
+  stratify_columns: []                        # e.g. ["model_type"]
 
 # ============================================================================
 # OPTUNA HYPERPARAMETER OPTIMIZATION (Optional)

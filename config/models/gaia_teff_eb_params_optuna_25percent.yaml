@@ -49,6 +49,8 @@ preprocessing:
 training:
   test_size: 0.2
   random_state: 42
+  stratify_target_bins: 10
+  stratify_columns: ["model_type"]
 
 optuna_optimization:
   enabled: false

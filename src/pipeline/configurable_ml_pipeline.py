@@ -113,6 +113,12 @@ def _generate_model_signature(model_config: Dict[str, Any]) -> str:
     training_config = model_config.get('training', {})
     signature_parts.append(f"test_size:{training_config.get('test_size', 0.2)}")
     signature_parts.append(f"random_state:{training_config.get('random_state', 42)}")
+    stratify_bins = training_config.get('stratify_target_bins')
+    if stratify_bins:
+        signature_parts.append(f"stratify_target_bins:{stratify_bins}")
+    stratify_cols = training_config.get('stratify_columns', [])
+    if stratify_cols:
+        signature_parts.append(f"stratify_columns:{','.join(sorted(stratify_cols))}")
     
     # Hyperparameter optimization settings (affect outcome / cache validity)
     optuna_config = model_config.get('optuna_optimization', {})
@@ -536,6 +542,16 @@ class PrepareTrainTestFromConfigStep(PipelineStep):
         # Extract features and target
         X = df.select(feature_cols).to_pandas()
         y = df[target].to_pandas()
+
+        # Extract stratification columns (categorical) early so they survive the same filters
+        training_config = model_config.get('training', {})
+        strat_cols_cfg = training_config.get('stratify_columns', []) or []
+        strat_col_series = {}
+        for sc in strat_cols_cfg:
+            if sc in df.columns:
+                strat_col_series[sc] = df[sc].to_pandas()
+            else:
+                self.logger.warning(f"stratify_columns: '{sc}' not in dataset, ignoring")
         
         # Get missing value indicator for filtering
         preprocessing = model_config.get('preprocessing', {})
@@ -551,6 +567,8 @@ class PrepareTrainTestFromConfigStep(PipelineStep):
             self.logger.warning(f"Filtering {n_invalid:,} invalid values (missing={missing_value}, <=0, NaN, or Inf) before transformation")
             X = X[valid_mask].reset_index(drop=True)
             y = y[valid_mask].reset_index(drop=True)
+            for sc in list(strat_col_series):
+                strat_col_series[sc] = strat_col_series[sc][valid_mask].reset_index(drop=True)
 
         # Apply target transformation if specified
         target_transform = model_config.get('target_transform', 'none')
@@ -590,6 +608,8 @@ class PrepareTrainTestFromConfigStep(PipelineStep):
             y = y[valid_mask].reset_index(drop=True)
             if 'y_original_train_full' in context:
                 context['y_original_train_full'] = context['y_original_train_full'][valid_mask].reset_index(drop=True)
+            for sc in list(strat_col_series):
+                strat_col_series[sc] = strat_col_series[sc][valid_mask].reset_index(drop=True)
 
         # Check for sample weights
         preprocessing = model_config.get('preprocessing', {})
@@ -605,23 +625,74 @@ class PrepareTrainTestFromConfigStep(PipelineStep):
                 self.logger.warning(f"Sample weight column '{weight_col}' not found, ignoring")
 
         # Train/test split
-        training_config = model_config.get('training', {})
         test_size = training_config.get('test_size', 0.2)
         random_state = training_config.get('random_state', 42)
+        stratify_bins = training_config.get('stratify_target_bins', None)
+
+        # Build stratification labels: Teff bins (optionally combined with categorical columns)
+        stratify_labels = None
+        min_required = max(2, int(np.ceil(1.0 / min(test_size, 1.0 - test_size))))
+
+        if stratify_bins is not None and stratify_bins > 0:
+            y_for_binning = context.get('y_original_train_full', y)
+            try:
+                teff_bins = pd.qcut(y_for_binning, q=stratify_bins, labels=False, duplicates='drop')
+            except Exception as e:
+                self.logger.warning(f"Could not create target bins: {e}; falling back to random split")
+                teff_bins = None
+
+            if teff_bins is not None:
+                # Try combined stratification (bins x categorical columns) first
+                if strat_col_series:
+                    combined = teff_bins.astype(str)
+                    for sc_name, sc_vals in strat_col_series.items():
+                        combined = combined + '_' + sc_vals.astype(str)
+                    n_strata = combined.nunique()
+                    smallest = combined.value_counts().min()
+                    if smallest >= min_required:
+                        stratify_labels = combined
+                        self.logger.info(
+                            f"Stratified split: {teff_bins.nunique()} target bins x "
+                            f"{list(strat_col_series.keys())} = {n_strata} strata, "
+                            f"smallest stratum has {smallest:,} samples"
+                        )
+                    else:
+                        self.logger.warning(
+                            f"Combined stratification smallest stratum ({smallest}) < "
+                            f"min required ({min_required}); falling back to target-bins-only"
+                        )
+
+                # Fall back to target-bins-only if combined didn't work or no categorical columns
+                if stratify_labels is None:
+                    smallest_bin = teff_bins.value_counts().min()
+                    if smallest_bin >= min_required:
+                        stratify_labels = teff_bins
+                        self.logger.info(
+                            f"Stratified split: {teff_bins.nunique()} target quantile bins "
+                            f"(requested {stratify_bins}), smallest bin has {smallest_bin:,} samples"
+                        )
+                    else:
+                        self.logger.warning(
+                            f"Target-bins-only smallest bin ({smallest_bin}) < "
+                            f"min required ({min_required}); falling back to random split"
+                        )
+
+        if stratify_labels is None and (stratify_bins or strat_col_series):
+            self.logger.info("Using random (non-stratified) split")
+
+        split_kwargs = dict(test_size=test_size, random_state=random_state)
+        if stratify_labels is not None:
+            split_kwargs['stratify'] = stratify_labels
 
         if sample_weight is not None:
             X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(
-                X, y, sample_weight,
-                test_size=test_size,
-                random_state=random_state
+                X, y, sample_weight, **split_kwargs
             )
             context['sample_weights_train'] = w_train
             context['sample_weights_test'] = w_test
         else:
             X_train, X_test, y_train, y_test = train_test_split(
-                X, y,
-                test_size=test_size,
-                random_state=random_state
+                X, y, **split_kwargs
             )
 
         self.logger.info(f"Train: {len(X_train):,} samples")
