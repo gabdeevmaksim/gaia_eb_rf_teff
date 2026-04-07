@@ -5,14 +5,14 @@ model:
   model_pattern: "rf_gaia_teff_eb_params_optuna_*"
 
 plots:
-  test_scatter: true
-  residuals: true
-  performance_by_temp: true
-  temp_distributions: true
+  test_scatter: false
+  residuals: false
+  performance_by_temp: false
+  temp_distributions: false
   feature_importance: true
   pit_histogram: true
   crps_distribution: true
-  color_temp_relations: true
+  color_temp_relations: false
   color_columns:
     - column: bp_rp
       label: "BP - RP"

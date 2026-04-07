@@ -42,15 +42,20 @@ optuna_optimization:
   enabled: true
   n_trials: 150
   timeout: null
+  # mae = validation MAE (default); crps = mean GMM CRPS on a fixed val subsample (same as final eval)
+  objective_metric: crps
+  gmm_n_components: 5
+  crps_subsample: 5000
+  gmm_n_jobs: 1
+  overfit_penalty: 1
+  max_samples: 100000
+  stop_if_no_improvement_for: 20
   search_space:
     n_estimators: [300, 800, 20]
-    # Allow significantly deeper trees to capture complex structure
     max_depth: [15, 40]
     min_samples_split: [2, 10]
-    # Allow very small leaves so trees can capture fine structure
-    min_samples_leaf: [1, 2]
-    # Use more features per split than sqrt/log2 (up to all features)
-    max_features: [sqrt, 0.8, 1.0]
+    min_samples_leaf: [1, 4]
+    max_features: [log2, sqrt, 0.8, 1.0]
 
 hyperparameters:
   n_estimators: 500

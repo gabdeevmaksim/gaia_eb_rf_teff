@@ -56,15 +56,21 @@ optuna_optimization:
   enabled: true
   # Use successive halving to scale rows up gradually (memory-stable).
   method: optuna              # optuna | halving
+  objective_metric: crps
+  gmm_n_components: 5
+  crps_subsample: 5000
+  gmm_n_jobs: 1
+  overfit_penalty: 1
   n_trials: 150
   timeout: null
   rf_n_jobs: -1               # use all CPUs; memory stays safe thanks to max_samples
   stop_if_no_improvement_for: 20  # stop early and save best if no improvement for 20 trials
+  max_samples: 100000
   search_space:
     n_estimators: [300, 800, 20]
     max_depth: [15, 40]
     min_samples_split: [2, 10]
-    min_samples_leaf: [1, 2]
+    min_samples_leaf: [1, 4]
     max_features: [sqrt, 0.8, 1.0]
 
 hyperparameters:

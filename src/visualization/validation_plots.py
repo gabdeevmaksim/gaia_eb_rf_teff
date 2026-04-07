@@ -918,7 +918,7 @@ def plot_gmm_density_map(
     fig, ax = plt.subplots(figsize=(10, 10))
 
     vmax_plot = np.nanmax(log_density)
-    vmin_plot = vmax_plot - 7.0
+    vmin_plot = -2.0
 
     im = ax.pcolormesh(
         x_edges, y_edges, log_density,
