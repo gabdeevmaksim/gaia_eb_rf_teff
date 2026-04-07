@@ -1,0 +1,61 @@
+Model: Gaia Teff with EB params and E(B-V) (Corrected, Log, Optuna)
+================================================================================
+
+Model ID: rf_gaia_teff_eb_params_optuna_20260402_134051
+Timestamp: 20260402_134051
+Description: Temperature prediction using Gaia colors, extinction (ebv_sandf), EB parameters (global_ranking, frequency, geom_model_reference_level), and model type (categorical). Teff correction and log target.
+
+Data Source: eb_unified_photometry.parquet
+Target: teff_gaia_corrected
+Target Transform: log
+Features: 16
+Feature columns:
+  - g
+  - bp
+  - rp
+  - bp_rp
+  - g_bp
+  - g_rp
+  - ebv_sandf
+  - global_ranking
+  - frequency
+  - geom_model_reference_level
+  - model_type_ELLIPSOIDAL
+  - model_type_ONEGAUSSIAN
+  - model_type_ONEGAUSSIAN_WITH_ELLIPSOIDAL
+  - model_type_TWOGAUSSIANS
+  - model_type_TWOGAUSSIANS_WITH_ELLIPSOIDAL_ON_ECLIPSE1
+  - model_type_TWOGAUSSIANS_WITH_ELLIPSOIDAL_ON_ECLIPSE2
+
+Extinction feature columns (E(B-V)):
+  - ebv_sandf
+
+TRAIN SET PERFORMANCE:
+  MAE:  462.5 K
+  RMSE: 978.2 K
+  R²:   0.7576
+  Within 10%: 76.6%
+
+TEST SET PERFORMANCE:
+  MAE:  490.2 K
+  RMSE: 1048.6 K
+  R²:   0.7192
+  Within 10%: 75.2%
+
+TOP 10 FEATURES:
+   1. bp_rp                          0.1859
+   2. bp                             0.1520
+   3. g_bp                           0.1251
+   4. g                              0.1217
+   5. g_rp                           0.1143
+   6. geom_model_reference_level     0.1069
+   7. frequency                      0.0905
+   8. rp                             0.0649
+   9. ebv_sandf                      0.0224
+  10. global_ranking                 0.0116
+
+PROBABILISTIC METRICS (5-component GMM):
+  CRPS mean:   395.8 K
+  CRPS median: 160.4 K
+  PIT mean:    0.436 (ideal=0.500)
+  PIT std:     0.401 (ideal~0.289)

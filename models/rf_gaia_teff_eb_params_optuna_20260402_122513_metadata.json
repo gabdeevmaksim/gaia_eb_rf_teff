@@ -1,0 +1,104 @@
+{
+  "model_id": "rf_gaia_teff_eb_params_optuna_20260402_122513",
+  "timestamp": "20260402_122513",
+  "model_name": "Gaia Teff with EB params and E(B-V) (Corrected, Log, Optuna)",
+  "description": "Temperature prediction using Gaia colors, extinction (ebv_sandf), EB parameters (global_ranking, frequency, geom_model_reference_level), and model type (categorical). Teff correction and log target.",
+  "model_type": "RandomForestRegressor",
+  "n_features": 16,
+  "features": [
+    "g",
+    "bp",
+    "rp",
+    "bp_rp",
+    "g_bp",
+    "g_rp",
+    "ebv_sandf",
+    "global_ranking",
+    "frequency",
+    "geom_model_reference_level",
+    "model_type_ELLIPSOIDAL",
+    "model_type_ONEGAUSSIAN",
+    "model_type_ONEGAUSSIAN_WITH_ELLIPSOIDAL",
+    "model_type_TWOGAUSSIANS",
+    "model_type_TWOGAUSSIANS_WITH_ELLIPSOIDAL_ON_ECLIPSE1",
+    "model_type_TWOGAUSSIANS_WITH_ELLIPSOIDAL_ON_ECLIPSE2"
+  ],
+  "data_source": "eb_unified_photometry.parquet",
+  "target": "teff_gaia_corrected",
+  "target_transform": "log",
+  "train_metrics": {
+    "mae": 459.2611548313169,
+    "rmse": 963.6415937996584,
+    "r2": 0.7647526934561888,
+    "mean_relative_error": 7.232488283162181,
+    "within_5_percent": 54.69531761175082,
+    "within_10_percent": 76.69521574404564,
+    "within_20_percent": 92.10104100958732,
+    "n_samples": 1020932
+  },
+  "test_metrics": {
+    "mae": 490.2919002179781,
+    "rmse": 1048.3363668277757,
+    "r2": 0.7193264598132054,
+    "mean_relative_error": 7.674813246014348,
+    "within_5_percent": 53.02585078790444,
+    "within_10_percent": 75.21568443075766,
+    "within_20_percent": 91.18456005077692,
+    "n_samples": 255234
+  },
+  "hyperparameters": {
+    "n_estimators": 800,
+    "max_depth": 15,
+    "min_samples_split": 5,
+    "min_samples_leaf": 2,
+    "max_features": "sqrt",
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": 0
+  },
+  "config_file": "config/models/gaia_teff_eb_params_optuna.yaml",
+  "data_config": {
+    "source_file": "eb_unified_photometry.parquet",
+    "source_format": "parquet",
+    "source_location": "raw",
+    "target": "teff_gaia_corrected",
+    "features": [
+      "g",
+      "bp",
+      "rp",
+      "bp_rp",
+      "g_bp",
+      "g_rp",
+      "ebv_sandf",
+      "global_ranking",
+      "frequency",
+      "geom_model_reference_level",
+      "model_type"
+    ],
+    "id_column": "source_id"
+  },
+  "crps_stats": {
+    "mean": 395.75680649215707,
+    "median": 160.43385608539336
+  },
+  "pit_stats": {
+    "mean": 0.4364850621266304,
+    "std": 0.4014012499153994
+  },
+  "teff_correction": {
+    "n_corrected": 19681,
+    "n_in_blend_zone": 8157,
+    "mean_correction": 2602.732480897934,
+    "median_correction": 2641.1160991821525,
+    "threshold": 10000,
+    "blend_width": 2000,
+    "degree": 2,
+    "target_column": "teff_gaia",
+    "corrected_column": "teff_gaia_corrected"
+  },
+  "categorical_encoder_path": "rf_gaia_teff_eb_params_optuna_20260402_122513_categorical_encoder.pkl",
+  "categorical_columns_encoded": [
+    "model_type"
+  ],
+  "categorical_encoding": "onehot"
+}

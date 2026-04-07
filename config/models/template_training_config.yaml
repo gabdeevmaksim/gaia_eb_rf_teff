@@ -207,6 +207,24 @@ optuna_optimization:
   # rf_n_jobs: 1                 # RF internal parallelism (keep low to avoid RAM spikes)
   # scoring: neg_mean_absolute_error
   
+  # Optimization objective (classic Optuna only; not used for method: halving)
+  # - mae: minimize validation MAE (default)
+  # - crps: minimize mean CRPS from a K-component GMM on per-tree predictions
+  #   (matches post-training probabilistic metrics; uses a fixed random subsample
+  #   of the internal val/train split for speed — see crps_subsample).
+  objective_metric: "mae"
+  gmm_n_components: 5
+  crps_subsample: 5000
+  gmm_n_jobs: 1
+
+  # Overfit penalty (optional, default: 0.0)
+  # Penalizes the train–validation gap:
+  #   mae:  objective = val_MAE + overfit_penalty * |train_MAE - val_MAE|
+  #   crps: objective = val_CRPS + overfit_penalty * |train_CRPS - val_CRPS|
+  # 0.0 = ignore gap (default), 0.5 = moderate penalty, 1.0 = equal weight.
+  # Higher values favor models that generalize better (less overfitting).
+  overfit_penalty: 0.0
+  
   # Optional: restrict search to a specific hyperparameter region (omit for full default ranges)
   # search_space:
   #   n_estimators: [200, 500, 50]              # [low, high] or [low, high, step]; default step 50

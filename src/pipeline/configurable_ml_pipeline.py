@@ -130,6 +130,18 @@ def _generate_model_signature(model_config: Dict[str, Any]) -> str:
         signature_parts.append(f"optuna_rf_n_jobs:{optuna_config['rf_n_jobs']}")
     if optuna_config.get('stop_if_no_improvement_for') is not None:
         signature_parts.append(f"optuna_stop_patience:{optuna_config['stop_if_no_improvement_for']}")
+    overfit_pen = optuna_config.get('overfit_penalty', 0.0)
+    if overfit_pen:
+        signature_parts.append(f"overfit_penalty:{overfit_pen}")
+    obj_metric = optuna_config.get('objective_metric', 'mae')
+    signature_parts.append(f"optuna_objective_metric:{obj_metric}")
+    if obj_metric == 'crps':
+        signature_parts.append(
+            f"optuna_gmm_n_components:{optuna_config.get('gmm_n_components', 5)}"
+        )
+        signature_parts.append(
+            f"optuna_crps_subsample:{optuna_config.get('crps_subsample', 5000)}"
+        )
     # Successive halving options (used when method == 'halving')
     for key in [
         'factor',
@@ -711,6 +723,11 @@ class PrepareTrainTestFromConfigStep(PipelineStep):
         context['y_test'] = y_test
         context['feature_cols'] = feature_cols
 
+        # Store stratification labels for the training fold (reused by Optuna's inner split)
+        if stratify_labels is not None:
+            train_idx = X_train.index
+            context['_train_stratify_labels'] = stratify_labels.iloc[train_idx].reset_index(drop=True)
+
         return context
 
 
@@ -1063,20 +1080,29 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
         id_prefix: str,
         signature: str,
         interrupted: bool,
+        objective_metric: str = 'mae',
     ) -> None:
         """Write a text report of the Optuna optimization (all trials + best)."""
         report_path = Path(report_path)
         report_path.parent.mkdir(parents=True, exist_ok=True)
+        metric_key = 'CRPS' if objective_metric == 'crps' else 'MAE'
+        if objective_metric == 'crps':
+            best_line = (
+                f"Best mean CRPS (validation subsample): {study.best_value:.4f}"
+            )
+        else:
+            best_line = f"Best MAE (validation): {study.best_value:.4f}"
         lines = [
             "=" * 70,
             "Optuna Hyperparameter Optimization Report",
             "=" * 70,
             f"Model id_prefix: {id_prefix}",
             f"Signature: {signature}",
+            f"Objective metric: {objective_metric}",
             f"Status: {'INTERRUPTED (user stopped)' if interrupted else 'COMPLETED'}",
             f"Trials run: {len(study.trials)}",
             f"Best trial: #{study.best_trial.number}",
-            f"Best MAE (validation): {study.best_value:.4f}",
+            best_line,
             "",
             "Best hyperparameters:",
             "-" * 40,
@@ -1092,7 +1118,20 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
             if t.state.name == "COMPLETE":
                 dur = t.duration.total_seconds() if t.duration else None
                 dur_str = f"{dur:.1f}s" if dur is not None else "?"
-                lines.append(f"  Trial {t.number}: MAE={t.value:.4f}  duration={dur_str}")
+                header = f"  Trial {t.number}: {metric_key}={t.value:.4f}  duration={dur_str}"
+                if 'train_mae' in t.user_attrs:
+                    header += (
+                        f"  (train={t.user_attrs['train_mae']:.4f}"
+                        f" val={t.user_attrs['val_mae']:.4f}"
+                        f" gap={t.user_attrs['gap']:.4f})"
+                    )
+                elif 'train_crps' in t.user_attrs:
+                    header += (
+                        f"  (train={t.user_attrs['train_crps']:.4f}"
+                        f" val={t.user_attrs['val_crps']:.4f}"
+                        f" gap={t.user_attrs['gap']:.4f})"
+                    )
+                lines.append(header)
                 for k, v in t.params.items():
                     lines.append(f"      {k}={v}")
                 lines.append("")
@@ -1110,7 +1149,13 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
                               report_path: Optional[Path] = None,
                               id_prefix: str = "",
                               signature: str = "",
-                              search_space: Optional[Dict[str, Any]] = None) -> Any:
+                              search_space: Optional[Dict[str, Any]] = None,
+                              stratify_labels: Optional[pd.Series] = None,
+                              overfit_penalty: float = 0.0,
+                              objective_metric: str = 'mae',
+                              gmm_n_components: int = 5,
+                              crps_subsample: int = 5000,
+                              gmm_n_jobs: int = 1) -> Any:
         """
         Run Optuna optimization to find best hyperparameters.
         On KeyboardInterrupt, writes report and returns (best_params, True).
@@ -1129,6 +1174,8 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
             y_train = y_train[valid_mask].reset_index(drop=True)
             if sample_weights is not None:
                 sample_weights = sample_weights[valid_mask]
+            if stratify_labels is not None:
+                stratify_labels = stratify_labels[valid_mask].reset_index(drop=True)
         
         # Also check for NaN in features
         feature_nan_mask = X_train.isna().any(axis=1)
@@ -1140,26 +1187,42 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
             y_train = y_train[valid_mask].reset_index(drop=True)
             if sample_weights is not None:
                 sample_weights = sample_weights[valid_mask]
+            if stratify_labels is not None:
+                stratify_labels = stratify_labels[valid_mask].reset_index(drop=True)
         
         # Subsample for Optuna to reduce memory (e.g. in Docker / limited RAM)
         if max_samples is not None and len(X_train) > max_samples:
             n_original = len(X_train)
             split_kw = {'train_size': max_samples, 'random_state': 42}
+            if stratify_labels is not None:
+                split_kw['stratify'] = stratify_labels
+            # Pack all arrays to split together, then unpack the "kept" halves
+            arrays_to_split = [X_train, y_train]
             if sample_weights is not None:
-                X_train, _, y_train, _, sample_weights, _ = train_test_split(
-                    X_train, y_train, sample_weights, **split_kw
-                )
-            else:
-                X_train, _, y_train, _ = train_test_split(X_train, y_train, **split_kw)
+                arrays_to_split.append(pd.Series(sample_weights))
+            if stratify_labels is not None:
+                arrays_to_split.append(stratify_labels)
+            split_result = train_test_split(*arrays_to_split, **split_kw)
+            # train_test_split returns [a_train, a_test, b_train, b_test, ...]
+            kept = split_result[::2]   # every even index = train portion
+            idx = 0
+            X_train = kept[idx].reset_index(drop=True); idx += 1
+            y_train = kept[idx].reset_index(drop=True); idx += 1
+            if sample_weights is not None:
+                sample_weights = kept[idx].values; idx += 1
+            if stratify_labels is not None:
+                stratify_labels = kept[idx].reset_index(drop=True); idx += 1
             self.logger.info(f"Subsampling to {len(X_train):,} samples for Optuna (from {n_original:,}) to reduce memory use")
         
         self.logger.info(f"Using {len(X_train):,} samples for Optuna optimization")
         
-        # Create validation split for optimization
+        # Create validation split for optimization (stratified if labels available)
         split_kwargs = {'test_size': 0.2, 'random_state': 42}
+        if stratify_labels is not None:
+            split_kwargs['stratify'] = stratify_labels
+            self.logger.info("Optuna internal split: stratified")
         
         if sample_weights is not None:
-            # train_test_split can handle multiple arrays
             X_opt_train, X_opt_val, y_opt_train, y_opt_val, weights_opt_train, weights_opt_val = train_test_split(
                 X_train, y_train, sample_weights, **split_kwargs
             )
@@ -1191,6 +1254,45 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
         msl_low, msl_high, msl_step = _int_range('min_samples_leaf', 1, 10, 1)
         max_feat_choices = _cat_choices('max_features', ['sqrt', 'log2', None])
 
+        om = (objective_metric or 'mae').lower()
+        if om not in ('mae', 'crps'):
+            raise ValueError(
+                f"Unknown objective_metric: {objective_metric!r} (expected 'mae' or 'crps')"
+            )
+
+        crps_fit_gmm = None
+        crps_score = None
+        val_idx = None
+        train_idx = None
+        n_sub_val = 0
+        n_sub_tr = 0
+        if om == 'crps':
+            from ..mixture_density import fit_gmm_to_tree_predictions, gaussian_mixture_crps
+            crps_fit_gmm = fit_gmm_to_tree_predictions
+            crps_score = gaussian_mixture_crps
+            n_sub_val = min(int(crps_subsample), len(y_opt_val))
+            n_sub_tr = min(int(crps_subsample), len(y_opt_train))
+            rng = np.random.RandomState(42)
+            val_idx = rng.choice(len(y_opt_val), size=n_sub_val, replace=False)
+            train_idx = rng.choice(len(y_opt_train), size=n_sub_tr, replace=False)
+            self.logger.info(
+                f"Optuna objective: mean CRPS (GMM components={gmm_n_components}, "
+                f"val subsample n={n_sub_val}, train subsample n={n_sub_tr}; "
+                f"gmm_n_jobs={gmm_n_jobs})"
+            )
+
+        if overfit_penalty > 0:
+            if om == 'crps':
+                self.logger.info(
+                    f"Overfit penalty: {overfit_penalty} "
+                    f"(objective = val_CRPS + {overfit_penalty} * |train_CRPS - val_CRPS|)"
+                )
+            else:
+                self.logger.info(
+                    f"Overfit penalty: {overfit_penalty} "
+                    f"(objective = val_MAE + {overfit_penalty} * |train_MAE - val_MAE|)"
+                )
+
         def objective(trial):
             # Suggest hyperparameters (from search_space or defaults)
             n_estimators = trial.suggest_int('n_estimators', n_est_low, n_est_high, step=n_est_step)
@@ -1199,7 +1301,6 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
             min_samples_leaf = trial.suggest_int('min_samples_leaf', msl_low, msl_high, step=msl_step)
             max_features = trial.suggest_categorical('max_features', max_feat_choices)
             
-            # Train model (rf_n_jobs=1 during Optuna reduces memory; full training still uses n_jobs=-1)
             model = RandomForestRegressor(
                 n_estimators=n_estimators,
                 max_depth=max_depth,
@@ -1215,12 +1316,56 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
                 model.fit(X_opt_train, y_opt_train, sample_weight=weights_opt_train)
             else:
                 model.fit(X_opt_train, y_opt_train)
-            
-            # Evaluate on validation set
-            y_pred = model.predict(X_opt_val)
-            mae = mean_absolute_error(y_opt_val, y_pred)
-            
-            return mae
+
+            if om == 'crps':
+                Xv = X_opt_val.iloc[val_idx]
+                Xv_arr = Xv.values if hasattr(Xv, 'values') else np.asarray(Xv)
+                tree_preds_val = np.array([est.predict(Xv_arr) for est in model.estimators_])
+                w, m, s = crps_fit_gmm(
+                    tree_preds_val,
+                    n_components=gmm_n_components,
+                    random_state=42,
+                    n_jobs=gmm_n_jobs,
+                )
+                yv = y_opt_val.iloc[val_idx].to_numpy()
+                crps_vals = crps_score(w, m, s, yv)
+                val_crps = float(np.mean(crps_vals))
+
+                if overfit_penalty > 0:
+                    Xtr = X_opt_train.iloc[train_idx]
+                    Xtr_arr = Xtr.values if hasattr(Xtr, 'values') else np.asarray(Xtr)
+                    tree_preds_tr = np.array(
+                        [est.predict(Xtr_arr) for est in model.estimators_]
+                    )
+                    w2, m2, s2 = crps_fit_gmm(
+                        tree_preds_tr,
+                        n_components=gmm_n_components,
+                        random_state=42,
+                        n_jobs=gmm_n_jobs,
+                    )
+                    ytr = y_opt_train.iloc[train_idx].to_numpy()
+                    crps_tr_vals = crps_score(w2, m2, s2, ytr)
+                    train_crps = float(np.mean(crps_tr_vals))
+                    gap = abs(train_crps - val_crps)
+                    trial.set_user_attr('train_crps', train_crps)
+                    trial.set_user_attr('val_crps', val_crps)
+                    trial.set_user_attr('gap', float(gap))
+                    return val_crps + overfit_penalty * gap
+
+                return val_crps
+
+            # Evaluate on validation set (MAE)
+            val_mae = mean_absolute_error(y_opt_val, model.predict(X_opt_val))
+
+            if overfit_penalty > 0:
+                train_mae = mean_absolute_error(y_opt_train, model.predict(X_opt_train))
+                gap = abs(train_mae - val_mae)
+                trial.set_user_attr('train_mae', float(train_mae))
+                trial.set_user_attr('val_mae', float(val_mae))
+                trial.set_user_attr('gap', float(gap))
+                return val_mae + overfit_penalty * gap
+
+            return val_mae
         
         # Early stopping: stop after N trials without improving the best value
         callbacks = []
@@ -1271,16 +1416,31 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
         # Write report (always, so you have a print of the optimisation)
         if report_path is not None and complete_trials:
             self._write_optuna_report(
-                study, report_path, id_prefix, signature, interrupted=interrupted
+                study,
+                report_path,
+                id_prefix,
+                signature,
+                interrupted=interrupted,
+                objective_metric=om,
             )
 
         if interrupted:
             if complete_trials:
-                self.logger.info(f"Best so far: MAE={study.best_value:.4f} (trial {study.best_trial.number})")
+                _label = 'CRPS' if om == 'crps' else 'MAE'
+                self.logger.info(
+                    f"Best so far: {_label}={study.best_value:.4f} "
+                    f"(trial {study.best_trial.number})"
+                )
             return (best_params, True)
         if not complete_trials:
             return best_params
-        self.logger.info(f"✓ Optimization complete. Best MAE: {study.best_value:.2f}")
+        if om == 'crps':
+            self.logger.info(
+                f"✓ Optimization complete. Best mean CRPS (val subsample): "
+                f"{study.best_value:.2f}"
+            )
+        else:
+            self.logger.info(f"✓ Optimization complete. Best MAE: {study.best_value:.2f}")
         for param, value in best_params.items():
             if param not in ['random_state', 'n_jobs', 'verbose']:
                 self.logger.info(f"  {param}: {value}")
@@ -1412,7 +1572,19 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
             raise ValueError(
                 f"Unknown optuna_optimization.method: {method} (expected 'optuna' or 'halving')"
             )
+        objective_metric = (optuna_config.get('objective_metric') or 'mae').lower()
+        if objective_metric not in ('mae', 'crps'):
+            raise ValueError(
+                "optuna_optimization.objective_metric must be 'mae' or 'crps' "
+                f"(got {objective_metric!r})"
+            )
+        if method == 'halving' and objective_metric == 'crps':
+            raise ValueError(
+                "objective_metric 'crps' is only supported with optuna_optimization.method: "
+                "'optuna'. Use method: optuna, or set objective_metric: mae for halving."
+            )
         self.logger.info(f"Proceeding with hyperparameter optimization (method={method})...")
+        self.logger.info(f"Optuna objective metric: {objective_metric}")
         
         # Get optimization settings from config
         n_trials = optuna_config.get('n_trials', self.n_trials)
@@ -1431,6 +1603,10 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
         report_path = optuna_reports_dir / f"optuna_{id_prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         
         search_space = optuna_config.get('search_space')
+
+        # Reuse stratification labels computed in PrepareTrainTestFromConfigStep
+        optuna_stratify_labels = context.get('_train_stratify_labels')
+
         if method == 'halving':
             # Successive halving handles resource ramp-up itself; ignore Optuna-specific settings.
             result = self._optimize_with_halving(
@@ -1450,7 +1626,9 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
             )
         else:
             result = self._optimize_with_optuna(
-                X_train, y_train, sample_weights,
+                X_train,
+                y_train,
+                sample_weights,
                 max_samples=max_samples,
                 rf_n_jobs=rf_n_jobs,
                 n_trials=n_trials,
@@ -1459,7 +1637,13 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
                 report_path=report_path,
                 id_prefix=id_prefix,
                 signature=signature,
-                search_space=search_space
+                search_space=search_space,
+                stratify_labels=optuna_stratify_labels,
+                overfit_penalty=float(optuna_config.get('overfit_penalty', 0.0)),
+                objective_metric=objective_metric,
+                gmm_n_components=int(optuna_config.get('gmm_n_components', 5)),
+                crps_subsample=int(optuna_config.get('crps_subsample', 5000)),
+                gmm_n_jobs=int(optuna_config.get('gmm_n_jobs', 1)),
             )
         
         # Handle interrupt: save best to cache, log, then exit

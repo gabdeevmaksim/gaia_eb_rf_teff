@@ -154,3 +154,99 @@ be025053aef2a324:
     verbose: 0
   optimized_at: '2026-03-24T12:35:40.247524'
   n_trials: 150
+09b1b0fd89766d9d:
+  hyperparameters:
+    n_estimators: 520
+    max_depth: 15
+    min_samples_split: 4
+    min_samples_leaf: 4
+    max_features: sqrt
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-03-31T12:08:16.173623'
+  n_trials: 150
+e931c506b728a20c:
+  hyperparameters:
+    n_estimators: 680
+    max_depth: 15
+    min_samples_split: 10
+    min_samples_leaf: 4
+    max_features: sqrt
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-03-31T12:49:58.874420'
+  n_trials: 150
+df479a6d7754a26c:
+  hyperparameters:
+    n_estimators: 500
+    max_depth: 15
+    min_samples_split: 3
+    min_samples_leaf: 3
+    max_features: 1.0
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-03-31T14:02:03.070681'
+  n_trials: 150
+460532211bcd3bbb:
+  hyperparameters:
+    n_estimators: 760
+    max_depth: 15
+    min_samples_split: 10
+    min_samples_leaf: 4
+    max_features: 1.0
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-03-31T17:45:14.521430'
+  n_trials: 150
+8c97db8a7de9e2c3:
+  hyperparameters:
+    n_estimators: 740
+    max_depth: 15
+    min_samples_split: 6
+    min_samples_leaf: 1
+    max_features: 1.0
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-04-01T13:12:59.078926'
+  n_trials: 150
+0a0451e77603094d:
+  hyperparameters:
+    n_estimators: 640
+    max_depth: 15
+    min_samples_split: 10
+    min_samples_leaf: 4
+    max_features: sqrt
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-04-01T19:57:49.147113'
+  n_trials: 150
+01b0be8c49931591:
+  hyperparameters:
+    n_estimators: 800
+    max_depth: 15
+    min_samples_split: 5
+    min_samples_leaf: 2
+    max_features: sqrt
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-04-02T12:11:05.130275'
+  n_trials: 150
+5213435e5f3b3d01:
+  hyperparameters:
+    n_estimators: 300
+    max_depth: 15
+    min_samples_split: 7
+    min_samples_leaf: 4
+    max_features: sqrt
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-04-02T13:32:32.785853'
+  n_trials: 150

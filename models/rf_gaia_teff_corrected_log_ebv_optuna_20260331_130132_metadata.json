@@ -1,0 +1,86 @@
+{
+  "model_id": "rf_gaia_teff_corrected_log_ebv_optuna_20260331_130132",
+  "timestamp": "20260331_130132",
+  "model_name": "Gaia Teff (Corrected, Log, +EBV, Optuna)",
+  "description": "Temperature prediction using Gaia colors plus E(B-V) extinction with polynomial Teff correction, log-transformed target, and Optuna hyperparameter optimization",
+  "model_type": "RandomForestRegressor",
+  "n_features": 7,
+  "features": [
+    "g",
+    "bp",
+    "rp",
+    "bp_rp",
+    "g_bp",
+    "g_rp",
+    "ebv_sandf"
+  ],
+  "data_source": "eb_unified_photometry.parquet",
+  "target": "teff_gaia_corrected",
+  "target_transform": "log",
+  "train_metrics": {
+    "mae": 527.344622640344,
+    "rmse": 1065.7607520935778,
+    "r2": 0.7116996152821646,
+    "mean_relative_error": 8.319260398405728,
+    "within_5_percent": 49.16948435351228,
+    "within_10_percent": 71.46822707095085,
+    "within_20_percent": 90.11775514921659,
+    "n_samples": 1020932
+  },
+  "test_metrics": {
+    "mae": 556.0836095581867,
+    "rmse": 1135.2513293306686,
+    "r2": 0.6733789366873149,
+    "mean_relative_error": 8.706275802397927,
+    "within_5_percent": 48.02730043802942,
+    "within_10_percent": 70.249653259362,
+    "within_20_percent": 89.29844769897427,
+    "n_samples": 255234
+  },
+  "hyperparameters": {
+    "n_estimators": 680,
+    "max_depth": 15,
+    "min_samples_split": 10,
+    "min_samples_leaf": 4,
+    "max_features": "sqrt",
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": 0
+  },
+  "config_file": "config/models/gaia_teff_corrected_log_ebv_optuna.yaml",
+  "data_config": {
+    "source_file": "eb_unified_photometry.parquet",
+    "source_format": "parquet",
+    "source_location": "raw",
+    "target": "teff_gaia_corrected",
+    "features": [
+      "g",
+      "bp",
+      "rp",
+      "bp_rp",
+      "g_bp",
+      "g_rp",
+      "ebv_sandf"
+    ],
+    "id_column": "source_id"
+  },
+  "crps_stats": {
+    "mean": 469.9088697218113,
+    "median": 201.20653434300363
+  },
+  "pit_stats": {
+    "mean": 0.4076953614437093,
+    "std": 0.4226203236733312
+  },
+  "teff_correction": {
+    "n_corrected": 19681,
+    "n_in_blend_zone": 8157,
+    "mean_correction": 2602.732480897934,
+    "median_correction": 2641.1160991821525,
+    "threshold": 10000,
+    "blend_width": 2000,
+    "degree": 2,
+    "target_column": "teff_gaia",
+    "corrected_column": "teff_gaia_corrected"
+  }
+}
