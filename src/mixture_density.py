@@ -43,6 +43,100 @@ def _fit_single_gmm(
     )
 
 
+def _fit_single_gmm_bic(
+    preds: np.ndarray,
+    k_max: int,
+    random_state: int,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+    """
+    Fit GMMs with K = 1..k_max and pick the K that minimizes BIC.
+
+    Returns arrays padded to length k_max (unused slots filled with
+    weight=0, mean=0, sigma=1) so the output stays rectangular.
+    """
+    X = preds.reshape(-1, 1)
+    best_bic = np.inf
+    best_gmm = None
+    best_k = 1
+
+    for k in range(1, k_max + 1):
+        gmm = GaussianMixture(
+            n_components=k,
+            covariance_type="full",
+            random_state=random_state,
+            max_iter=200,
+        )
+        gmm.fit(X)
+        bic = gmm.bic(X)
+        if bic < best_bic:
+            best_bic = bic
+            best_gmm = gmm
+            best_k = k
+
+    order = np.argsort(best_gmm.means_.ravel())
+    w = best_gmm.weights_[order]
+    m = best_gmm.means_.ravel()[order]
+    s = np.sqrt(best_gmm.covariances_.ravel()[order])
+
+    # Pad to k_max so all samples have the same array width
+    w_pad = np.zeros(k_max)
+    m_pad = np.zeros(k_max)
+    s_pad = np.ones(k_max)  # sigma=1 for unused slots (avoids div-by-zero)
+    w_pad[:best_k] = w
+    m_pad[:best_k] = m
+    s_pad[:best_k] = s
+
+    return w_pad, m_pad, s_pad, best_k
+
+
+def fit_gmm_to_tree_predictions_bic(
+    tree_predictions: np.ndarray,
+    k_max: int = 8,
+    random_state: int = 42,
+    n_jobs: int = -1,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Fit a Gaussian mixture per sample, selecting K via BIC.
+
+    For each sample, fits K = 1..k_max and keeps the model with the
+    lowest BIC.  Output arrays are padded to k_max columns; unused
+    components have weight 0.
+
+    Parameters
+    ----------
+    tree_predictions : (n_trees, n_samples)
+    k_max : int
+        Maximum number of components to try (default 8).
+    random_state : int
+    n_jobs : int
+
+    Returns
+    -------
+    weights : (n_samples, k_max)
+    means   : (n_samples, k_max)
+    sigmas  : (n_samples, k_max)
+    best_ks : (n_samples,)  -- selected K per sample
+    """
+    n_trees, n_samples = tree_predictions.shape
+
+    if n_jobs == -1:
+        n_jobs = os.cpu_count() or 1
+
+    results = Parallel(n_jobs=n_jobs, backend="loky")(
+        delayed(_fit_single_gmm_bic)(
+            tree_predictions[:, i], k_max, random_state
+        )
+        for i in range(n_samples)
+    )
+
+    weights = np.array([r[0] for r in results])
+    means = np.array([r[1] for r in results])
+    sigmas = np.array([r[2] for r in results])
+    best_ks = np.array([r[3] for r in results])
+
+    return weights, means, sigmas, best_ks
+
+
 def fit_gmm_to_tree_predictions(
     tree_predictions: np.ndarray,
     n_components: int = 5,

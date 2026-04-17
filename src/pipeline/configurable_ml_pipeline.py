@@ -1800,23 +1800,51 @@ class EvaluateModelFromConfigStep(PipelineStep):
                 f"mean={np.mean(y_pred_test_uncertainty):.1f} K"
             )
 
-        # Fit 5-component Gaussian mixture to tree predictions (in original scale)
+        # Fit Gaussian mixture to tree predictions (in original scale)
         if tree_preds_transformed is not None:
             from ..mixture_density import (
                 fit_gmm_to_tree_predictions,
+                fit_gmm_to_tree_predictions_bic,
                 gaussian_mixture_crps,
                 gaussian_mixture_pit,
             )
-            n_components = 5
-            self.logger.info(
-                f"Fitting {n_components}-component GMM to tree predictions "
-                f"({tree_preds_transformed.shape[0]} trees, {tree_preds_transformed.shape[1]} samples)..."
-            )
-            gmm_weights, gmm_means, gmm_sigmas = fit_gmm_to_tree_predictions(
-                tree_preds_transformed,
-                n_components=n_components,
-                random_state=context.get('model_config', {}).get('training', {}).get('random_state', 42),
-            )
+            val_config = model_config.get('validation', {})
+            gmm_select_k = val_config.get('gmm_select_k')  # None or "bic"
+            rs = context.get('model_config', {}).get('training', {}).get('random_state', 42)
+
+            if gmm_select_k == 'bic':
+                k_max = int(val_config.get('gmm_k_max', 8))
+                self.logger.info(
+                    f"Fitting GMM (BIC selection, K=1..{k_max}) to tree predictions "
+                    f"({tree_preds_transformed.shape[0]} trees, "
+                    f"{tree_preds_transformed.shape[1]} samples)..."
+                )
+                gmm_weights, gmm_means, gmm_sigmas, best_ks = (
+                    fit_gmm_to_tree_predictions_bic(
+                        tree_preds_transformed,
+                        k_max=k_max,
+                        random_state=rs,
+                    )
+                )
+                context['gmm_best_ks'] = best_ks
+                self.logger.info(
+                    f"  BIC-selected K: mean={np.mean(best_ks):.1f}, "
+                    f"median={np.median(best_ks):.0f}, "
+                    f"min={best_ks.min()}, max={best_ks.max()}"
+                )
+            else:
+                n_components = int(val_config.get('gmm_n_components', 5))
+                self.logger.info(
+                    f"Fitting {n_components}-component GMM to tree predictions "
+                    f"({tree_preds_transformed.shape[0]} trees, "
+                    f"{tree_preds_transformed.shape[1]} samples)..."
+                )
+                gmm_weights, gmm_means, gmm_sigmas = fit_gmm_to_tree_predictions(
+                    tree_preds_transformed,
+                    n_components=n_components,
+                    random_state=rs,
+                )
+
             context['gmm_weights'] = gmm_weights
             context['gmm_means'] = gmm_means
             context['gmm_sigmas'] = gmm_sigmas
@@ -1958,6 +1986,19 @@ class SaveModelFromConfigStep(PipelineStep):
                     'mean': float(np.mean(pit)),
                     'std': float(np.std(pit)),
                 }
+            gmm_meta = {}
+            best_ks = context.get('gmm_best_ks')
+            if best_ks is not None:
+                gmm_meta['select_k'] = 'bic'
+                gmm_meta['k_max'] = int(context['gmm_weights'].shape[1])
+                gmm_meta['k_mean'] = float(np.mean(best_ks))
+                gmm_meta['k_median'] = int(np.median(best_ks))
+                gmm_meta['k_min'] = int(best_ks.min())
+                gmm_meta['k_max_used'] = int(best_ks.max())
+            else:
+                gmm_meta['select_k'] = 'fixed'
+                gmm_meta['n_components'] = int(context['gmm_weights'].shape[1])
+            metadata['gmm_config'] = gmm_meta
 
         # Add Teff correction info if applied
         if context.get('teff_correction_applied', False):
@@ -2029,7 +2070,16 @@ class SaveModelFromConfigStep(PipelineStep):
 
             if context.get('crps_stats'):
                 crps_stats = context['crps_stats']
-                f.write("\nPROBABILISTIC METRICS (5-component GMM):\n")
+                best_ks = context.get('gmm_best_ks')
+                if best_ks is not None:
+                    f.write(
+                        f"\nPROBABILISTIC METRICS (BIC-selected GMM, "
+                        f"K=1..{context['gmm_weights'].shape[1]}, "
+                        f"median K={int(np.median(best_ks))}):\n"
+                    )
+                else:
+                    n_comp = context['gmm_weights'].shape[1]
+                    f.write(f"\nPROBABILISTIC METRICS ({n_comp}-component GMM):\n")
                 f.write(f"  CRPS mean:   {crps_stats['mean']:.1f} K\n")
                 f.write(f"  CRPS median: {crps_stats['median']:.1f} K\n")
                 pit = context.get('pit_values')
@@ -2049,16 +2099,19 @@ class SaveModelFromConfigStep(PipelineStep):
             predictions_df['y_pred_uncertainty'] = context['y_pred_test_uncertainty']
             self.logger.info("  (includes inner uncertainty column: y_pred_uncertainty)")
 
-        # GMM mixture parameters (5 components)
+        # GMM mixture parameters
         if context.get('gmm_weights') is not None:
             n_comp = context['gmm_weights'].shape[1]
             for k in range(n_comp):
                 predictions_df[f'gmm_weight_{k}'] = context['gmm_weights'][:, k]
                 predictions_df[f'gmm_mean_{k}'] = context['gmm_means'][:, k]
                 predictions_df[f'gmm_sigma_{k}'] = context['gmm_sigmas'][:, k]
+            if context.get('gmm_best_ks') is not None:
+                predictions_df['gmm_n_components'] = context['gmm_best_ks']
             predictions_df['crps'] = context['crps_values']
             predictions_df['pit'] = context['pit_values']
-            self.logger.info(f"  (includes {n_comp}-component GMM, CRPS, PIT)")
+            bic_note = " (BIC-selected K)" if context.get('gmm_best_ks') is not None else ""
+            self.logger.info(f"  (includes {n_comp}-component GMM{bic_note}, CRPS, PIT)")
 
         # Add original color features to predictions for validation plots
         # Get the original features from X_test (before any feature engineering)

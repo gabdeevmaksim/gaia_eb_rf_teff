@@ -303,6 +303,19 @@ validation:
     unit: "K"                                  # Unit of target variable
     short: "Teff"                              # Short name for plots
 
+  # GMM settings for probabilistic metrics (CRPS, PIT)
+  # A Gaussian mixture is fitted to per-tree predictions for each test sample.
+  #
+  # gmm_n_components: fixed number of components (default 5).
+  #   Ignored when gmm_select_k is set.
+  # gmm_select_k: method to auto-select K per sample.
+  #   null  = use fixed gmm_n_components (default)
+  #   "bic" = try K = 1..gmm_k_max and pick the K with lowest BIC
+  # gmm_k_max: maximum K to try when gmm_select_k: bic (default 8).
+  gmm_n_components: 5
+  gmm_select_k: null
+  gmm_k_max: 8
+
 # ============================================================================
 # HYPERPARAMETER CACHE (Auto-generated)
 # ============================================================================
