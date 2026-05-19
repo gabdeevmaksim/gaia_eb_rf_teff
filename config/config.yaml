@@ -18,6 +18,12 @@ paths:
 datasets:
   # Input: unified photometry (download from HF to data/raw)
   eb_unified_photometry: eb_unified_photometry.parquet
+  # Input: spectroscopic Teff from Gaia GSP-Spec, ESP-UCD, MSC (data/raw)
+  teff_gsp_spec: teff_gsp_spec.ecsv
+  # Input: DEBCat detached eclipsing binaries cross-matched with Gaia DR3
+  debcat_gaia: debcat_cross_with_gaia.ecsv
+  # Input: WUMaCat contact binaries cross-matched with Gaia DR3
+  wumacat_gaia: WUMaCat_cross_with_gaia.ecsv
   # Output: merge script writes this to data/processed
   eb_catalog_teff: eb_catalog_teff.parquet
 
