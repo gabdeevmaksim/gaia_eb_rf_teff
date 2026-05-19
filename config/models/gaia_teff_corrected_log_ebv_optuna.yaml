@@ -37,6 +37,8 @@ training:
   test_size: 0.2
   random_state: 42
   stratify_target_bins: 10
+  stratify_hot_as_one_stratum: true
+  stratify_hot_threshold: 10000.0
 
 optuna_optimization:
   enabled: true
@@ -44,14 +46,13 @@ optuna_optimization:
   timeout: null
   # mae = validation MAE (default); crps = mean GMM CRPS on a fixed val subsample (same as final eval)
   objective_metric: crps
-  gmm_n_components: 5
+  gmm_n_components: 3
   crps_subsample: 5000
   gmm_n_jobs: 1
   overfit_penalty: 1
-  max_samples: 100000
   stop_if_no_improvement_for: 20
   search_space:
-    n_estimators: [300, 800, 20]
+    n_estimators: [300, 480, 20]
     max_depth: [15, 40]
     min_samples_split: [2, 10]
     min_samples_leaf: [1, 4]
@@ -68,7 +69,16 @@ hyperparameters:
   verbose: 0
 
 feature_engineering:
-  enabled: false
+  enabled: true
+
+  color_cols:
+    - "bp"
+    - "ebv_sandf"
+  custom_features:
+    bp_corr: "bp - ebv_sandf"
+    # Example: custom_ratio: "bp_rp / g_bp"
+    # Example: custom_sum: "bp_rp + g_bp"
+
 
 clustering:
   enabled: false
@@ -88,3 +98,5 @@ validation:
     unit: K
     short: Teff
 
+  gmm_select_k: bic
+  gmm_k_max: 5

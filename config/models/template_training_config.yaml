@@ -165,7 +165,8 @@ training:
   # is heavily skewed (e.g. few hot stars vs. many cool stars).
   # Set to null or 0 to disable.  Typical value: 10.
   stratify_target_bins: null                  # e.g. 10 for 10 quantile bins
-  
+  stratify_hot_as_one_stratum: true
+  stratify_hot_threshold: 10000.0
   # Additionally stratify on categorical columns (optional, list).
   # Creates combined strata: (target_bin x column1 x column2 ...).
   # Falls back to target-bins-only if any combined stratum is too small,
@@ -313,8 +314,8 @@ validation:
   #   "bic" = try K = 1..gmm_k_max and pick the K with lowest BIC
   # gmm_k_max: maximum K to try when gmm_select_k: bic (default 8).
   gmm_n_components: 5
-  gmm_select_k: null
-  gmm_k_max: 8
+  gmm_select_k: bic
+  gmm_k_max: 5
 
 # ============================================================================
 # HYPERPARAMETER CACHE (Auto-generated)

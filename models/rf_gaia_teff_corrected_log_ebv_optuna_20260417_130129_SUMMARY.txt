@@ -1,0 +1,49 @@
+Model: Gaia Teff (Corrected, Log, +EBV, Optuna)
+================================================================================
+
+Model ID: rf_gaia_teff_corrected_log_ebv_optuna_20260417_130129
+Timestamp: 20260417_130129
+Description: Temperature prediction using Gaia colors plus E(B-V) extinction with polynomial Teff correction, log-transformed target, and Optuna hyperparameter optimization
+
+Data Source: eb_unified_photometry.parquet
+Target: teff_gaia_corrected
+Target Transform: log
+Features: 7
+Feature columns:
+  - g
+  - bp
+  - rp
+  - bp_rp
+  - g_bp
+  - g_rp
+  - ebv_sandf
+
+Extinction feature columns (E(B-V)):
+  - ebv_sandf
+
+TRAIN SET PERFORMANCE:
+  MAE:  499.5 K
+  RMSE: 1011.6 K
+  R²:   0.7408
+  Within 10%: 73.3%
+
+TEST SET PERFORMANCE:
+  MAE:  541.7 K
+  RMSE: 1111.2 K
+  R²:   0.6846
+  Within 10%: 71.6%
+
+TOP 10 FEATURES:
+   1. bp                             0.3471
+   2. bp_rp                          0.2855
+   3. g                              0.1410
+   4. g_bp                           0.0716
+   5. g_rp                           0.0700
+   6. ebv_sandf                      0.0550
+   7. rp                             0.0297
+
+PROBABILISTIC METRICS (BIC-selected GMM, K=1..5, median K=2):
+  CRPS mean:   452.1 K
+  CRPS median: 191.1 K
+  PIT mean:    0.418 (ideal=0.500)
+  PIT std:     0.422 (ideal~0.289)

@@ -250,3 +250,39 @@ df479a6d7754a26c:
     verbose: 0
   optimized_at: '2026-04-02T13:32:32.785853'
   n_trials: 150
+ad03e5dac17b756b:
+  hyperparameters:
+    n_estimators: 360
+    max_depth: 16
+    min_samples_split: 10
+    min_samples_leaf: 4
+    max_features: log2
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-04-17T09:52:28.028339'
+  n_trials: 150
+83ef7cf6f70188f0:
+  hyperparameters:
+    n_estimators: 460
+    max_depth: 17
+    min_samples_split: 10
+    min_samples_leaf: 4
+    max_features: 0.8
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-04-17T11:30:25.905144'
+  n_trials: 150
+ec1f10efe33022b4:
+  hyperparameters:
+    n_estimators: 320
+    max_depth: 16
+    min_samples_split: 5
+    min_samples_leaf: 4
+    max_features: 0.8
+    random_state: 42
+    n_jobs: -1
+    verbose: 0
+  optimized_at: '2026-04-17T12:58:00.535024'
+  n_trials: 150

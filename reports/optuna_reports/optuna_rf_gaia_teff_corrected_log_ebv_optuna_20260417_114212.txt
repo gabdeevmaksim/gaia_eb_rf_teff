@@ -1,0 +1,498 @@
+======================================================================
+Optuna Hyperparameter Optimization Report
+======================================================================
+Model id_prefix: rf_gaia_teff_corrected_log_ebv_optuna
+Signature: ec1f10efe33022b4
+Objective metric: crps
+Status: COMPLETED
+Trials run: 68
+Best trial: #47
+Best mean CRPS (validation subsample): 0.0316
+
+Best hyperparameters:
+----------------------------------------
+  n_estimators: 320
+  max_depth: 16
+  min_samples_split: 5
+  min_samples_leaf: 4
+  max_features: 0.8
+
+All trials (trial_number, value, duration_sec, params):
+----------------------------------------
+  Trial 0: CRPS=0.0335  duration=68.5s  (train=0.0214 val=0.0274 gap=0.0060)
+      n_estimators=300
+      max_depth=21
+      min_samples_split=4
+      min_samples_leaf=3
+      max_features=0.8
+
+  Trial 1: CRPS=0.0328  duration=83.0s  (train=0.0221 val=0.0274 gap=0.0053)
+      n_estimators=380
+      max_depth=21
+      min_samples_split=8
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 2: CRPS=0.0386  duration=94.7s  (train=0.0124 val=0.0255 gap=0.0131)
+      n_estimators=300
+      max_depth=38
+      min_samples_split=8
+      min_samples_leaf=2
+      max_features=1.0
+
+  Trial 3: CRPS=0.0377  duration=89.3s  (train=0.0134 val=0.0256 gap=0.0121)
+      n_estimators=380
+      max_depth=32
+      min_samples_split=2
+      min_samples_leaf=3
+      max_features=0.8
+
+  Trial 4: CRPS=0.0409  duration=123.5s  (train=0.0100 val=0.0254 gap=0.0154)
+      n_estimators=400
+      max_depth=39
+      min_samples_split=5
+      min_samples_leaf=2
+      max_features=1.0
+
+  Trial 5: CRPS=0.0321  duration=73.8s  (train=0.0259 val=0.0290 gap=0.0031)
+      n_estimators=340
+      max_depth=18
+      min_samples_split=6
+      min_samples_leaf=3
+      max_features=0.8
+
+  Trial 6: CRPS=0.0340  duration=42.3s  (train=0.0196 val=0.0268 gap=0.0072)
+      n_estimators=300
+      max_depth=26
+      min_samples_split=7
+      min_samples_leaf=4
+      max_features=log2
+
+  Trial 7: CRPS=0.0374  duration=54.5s  (train=0.0147 val=0.0261 gap=0.0114)
+      n_estimators=420
+      max_depth=40
+      min_samples_split=4
+      min_samples_leaf=3
+      max_features=log2
+
+  Trial 8: CRPS=0.0348  duration=49.5s  (train=0.0200 val=0.0274 gap=0.0074)
+      n_estimators=380
+      max_depth=23
+      min_samples_split=6
+      min_samples_leaf=2
+      max_features=sqrt
+
+  Trial 9: CRPS=0.0417  duration=113.0s  (train=0.0092 val=0.0255 gap=0.0162)
+      n_estimators=360
+      max_depth=39
+      min_samples_split=3
+      min_samples_leaf=2
+      max_features=1.0
+
+  Trial 10: CRPS=0.0320  duration=52.9s  (train=0.0311 val=0.0316 gap=0.0004)
+      n_estimators=480
+      max_depth=15
+      min_samples_split=10
+      min_samples_leaf=1
+      max_features=sqrt
+
+  Trial 11: CRPS=0.0320  duration=52.3s  (train=0.0311 val=0.0316 gap=0.0004)
+      n_estimators=480
+      max_depth=15
+      min_samples_split=10
+      min_samples_leaf=1
+      max_features=sqrt
+
+  Trial 12: CRPS=0.0320  duration=52.5s  (train=0.0311 val=0.0316 gap=0.0004)
+      n_estimators=480
+      max_depth=15
+      min_samples_split=10
+      min_samples_leaf=1
+      max_features=sqrt
+
+  Trial 13: CRPS=0.0321  duration=53.2s  (train=0.0299 val=0.0310 gap=0.0011)
+      n_estimators=480
+      max_depth=16
+      min_samples_split=10
+      min_samples_leaf=1
+      max_features=sqrt
+
+  Trial 14: CRPS=0.0372  duration=56.7s  (train=0.0152 val=0.0262 gap=0.0110)
+      n_estimators=440
+      max_depth=30
+      min_samples_split=9
+      min_samples_leaf=1
+      max_features=sqrt
+
+  Trial 15: CRPS=0.0325  duration=52.8s  (train=0.0273 val=0.0299 gap=0.0026)
+      n_estimators=460
+      max_depth=18
+      min_samples_split=9
+      min_samples_leaf=1
+      max_features=sqrt
+
+  Trial 16: CRPS=0.0350  duration=55.0s  (train=0.0190 val=0.0270 gap=0.0080)
+      n_estimators=440
+      max_depth=25
+      min_samples_split=10
+      min_samples_leaf=1
+      max_features=sqrt
+
+  Trial 17: CRPS=0.0326  duration=53.1s  (train=0.0271 val=0.0299 gap=0.0027)
+      n_estimators=460
+      max_depth=18
+      min_samples_split=8
+      min_samples_leaf=1
+      max_features=sqrt
+
+  Trial 18: CRPS=0.0367  duration=59.1s  (train=0.0155 val=0.0261 gap=0.0106)
+      n_estimators=480
+      max_depth=34
+      min_samples_split=9
+      min_samples_leaf=2
+      max_features=sqrt
+
+  Trial 19: CRPS=0.0340  duration=52.0s  (train=0.0225 val=0.0283 gap=0.0057)
+      n_estimators=420
+      max_depth=21
+      min_samples_split=7
+      min_samples_leaf=1
+      max_features=log2
+
+  Trial 20: CRPS=0.0320  duration=51.2s  (train=0.0311 val=0.0316 gap=0.0005)
+      n_estimators=460
+      max_depth=15
+      min_samples_split=10
+      min_samples_leaf=2
+      max_features=sqrt
+
+  Trial 21: CRPS=0.0320  duration=51.2s  (train=0.0311 val=0.0316 gap=0.0005)
+      n_estimators=460
+      max_depth=15
+      min_samples_split=10
+      min_samples_leaf=2
+      max_features=sqrt
+
+  Trial 22: CRPS=0.0322  duration=52.6s  (train=0.0273 val=0.0298 gap=0.0024)
+      n_estimators=460
+      max_depth=18
+      min_samples_split=9
+      min_samples_leaf=2
+      max_features=sqrt
+
+  Trial 23: CRPS=0.0320  duration=49.4s  (train=0.0311 val=0.0316 gap=0.0005)
+      n_estimators=440
+      max_depth=15
+      min_samples_split=10
+      min_samples_leaf=2
+      max_features=sqrt
+
+  Trial 24: CRPS=0.0324  duration=51.8s  (train=0.0260 val=0.0292 gap=0.0032)
+      n_estimators=440
+      max_depth=19
+      min_samples_split=9
+      min_samples_leaf=2
+      max_features=sqrt
+
+  Trial 25: CRPS=0.0343  duration=52.4s  (train=0.0204 val=0.0274 gap=0.0070)
+      n_estimators=420
+      max_depth=23
+      min_samples_split=7
+      min_samples_leaf=2
+      max_features=sqrt
+
+  Trial 26: CRPS=0.0320  duration=50.9s  (train=0.0286 val=0.0303 gap=0.0017)
+      n_estimators=440
+      max_depth=17
+      min_samples_split=8
+      min_samples_leaf=3
+      max_features=sqrt
+
+  Trial 27: CRPS=0.0326  duration=53.9s  (train=0.0249 val=0.0288 gap=0.0038)
+      n_estimators=460
+      max_depth=20
+      min_samples_split=10
+      min_samples_leaf=2
+      max_features=log2
+
+  Trial 28: CRPS=0.0338  duration=111.2s  (train=0.0196 val=0.0267 gap=0.0071)
+      n_estimators=400
+      max_depth=23
+      min_samples_split=9
+      min_samples_leaf=3
+      max_features=1.0
+
+  Trial 29: CRPS=0.0359  duration=93.0s  (train=0.0158 val=0.0258 gap=0.0101)
+      n_estimators=420
+      max_depth=28
+      min_samples_split=8
+      min_samples_leaf=3
+      max_features=0.8
+
+  Trial 30: CRPS=0.0322  duration=52.1s  (train=0.0296 val=0.0309 gap=0.0013)
+      n_estimators=460
+      max_depth=16
+      min_samples_split=5
+      min_samples_leaf=2
+      max_features=sqrt
+
+  Trial 31: CRPS=0.0319  duration=50.3s  (train=0.0288 val=0.0304 gap=0.0016)
+      n_estimators=440
+      max_depth=17
+      min_samples_split=10
+      min_samples_leaf=3
+      max_features=sqrt
+
+  Trial 32: CRPS=0.0321  duration=51.9s  (train=0.0252 val=0.0287 gap=0.0034)
+      n_estimators=440
+      max_depth=20
+      min_samples_split=10
+      min_samples_leaf=4
+      max_features=sqrt
+
+  Trial 33: CRPS=0.0320  duration=52.2s  (train=0.0287 val=0.0304 gap=0.0016)
+      n_estimators=460
+      max_depth=17
+      min_samples_split=9
+      min_samples_leaf=3
+      max_features=sqrt
+
+  Trial 34: CRPS=0.0329  duration=85.1s  (train=0.0221 val=0.0275 gap=0.0054)
+      n_estimators=400
+      max_depth=21
+      min_samples_split=9
+      min_samples_leaf=3
+      max_features=0.8
+
+  Trial 35: CRPS=0.0319  duration=50.5s  (train=0.0287 val=0.0303 gap=0.0016)
+      n_estimators=440
+      max_depth=17
+      min_samples_split=8
+      min_samples_leaf=4
+      max_features=sqrt
+
+  Trial 36: CRPS=0.0365  duration=120.6s  (train=0.0147 val=0.0256 gap=0.0109)
+      n_estimators=420
+      max_depth=36
+      min_samples_split=8
+      min_samples_leaf=4
+      max_features=1.0
+
+  Trial 37: CRPS=0.0317  duration=85.7s  (train=0.0277 val=0.0297 gap=0.0020)
+      n_estimators=440
+      max_depth=17
+      min_samples_split=8
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 38: CRPS=0.0331  duration=85.1s  (train=0.0210 val=0.0271 gap=0.0061)
+      n_estimators=400
+      max_depth=22
+      min_samples_split=7
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 39: CRPS=0.0317  duration=73.6s  (train=0.0277 val=0.0297 gap=0.0020)
+      n_estimators=360
+      max_depth=17
+      min_samples_split=7
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 40: CRPS=0.0343  duration=77.6s  (train=0.0182 val=0.0263 gap=0.0080)
+      n_estimators=340
+      max_depth=25
+      min_samples_split=6
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 41: CRPS=0.0317  duration=74.0s  (train=0.0277 val=0.0297 gap=0.0020)
+      n_estimators=360
+      max_depth=17
+      min_samples_split=8
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 42: CRPS=0.0317  duration=73.4s  (train=0.0277 val=0.0297 gap=0.0020)
+      n_estimators=360
+      max_depth=17
+      min_samples_split=7
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 43: CRPS=0.0320  duration=75.6s  (train=0.0248 val=0.0284 gap=0.0036)
+      n_estimators=360
+      max_depth=19
+      min_samples_split=7
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 44: CRPS=0.0325  duration=76.6s  (train=0.0234 val=0.0279 gap=0.0045)
+      n_estimators=360
+      max_depth=20
+      min_samples_split=6
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 45: CRPS=0.0320  duration=72.7s  (train=0.0248 val=0.0284 gap=0.0036)
+      n_estimators=340
+      max_depth=19
+      min_samples_split=8
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 46: CRPS=0.0317  duration=67.2s  (train=0.0277 val=0.0297 gap=0.0020)
+      n_estimators=320
+      max_depth=17
+      min_samples_split=7
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 47: CRPS=0.0316  duration=66.2s  (train=0.0291 val=0.0304 gap=0.0012)
+      n_estimators=320
+      max_depth=16
+      min_samples_split=5
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 48: CRPS=0.0316  duration=66.3s  (train=0.0291 val=0.0304 gap=0.0012)
+      n_estimators=320
+      max_depth=16
+      min_samples_split=5
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 49: CRPS=0.0316  duration=66.3s  (train=0.0291 val=0.0304 gap=0.0012)
+      n_estimators=320
+      max_depth=16
+      min_samples_split=4
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 50: CRPS=0.0316  duration=63.6s  (train=0.0291 val=0.0304 gap=0.0013)
+      n_estimators=300
+      max_depth=16
+      min_samples_split=4
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 51: CRPS=0.0316  duration=63.0s  (train=0.0291 val=0.0304 gap=0.0013)
+      n_estimators=300
+      max_depth=16
+      min_samples_split=4
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 52: CRPS=0.0316  duration=63.0s  (train=0.0291 val=0.0304 gap=0.0013)
+      n_estimators=300
+      max_depth=16
+      min_samples_split=4
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 53: CRPS=0.0316  duration=63.5s  (train=0.0291 val=0.0304 gap=0.0013)
+      n_estimators=300
+      max_depth=16
+      min_samples_split=4
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 54: CRPS=0.0316  duration=65.9s  (train=0.0291 val=0.0304 gap=0.0012)
+      n_estimators=320
+      max_depth=16
+      min_samples_split=4
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 55: CRPS=0.0320  duration=70.2s  (train=0.0248 val=0.0284 gap=0.0036)
+      n_estimators=320
+      max_depth=19
+      min_samples_split=3
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 56: CRPS=0.0317  duration=64.8s  (train=0.0304 val=0.0311 gap=0.0006)
+      n_estimators=320
+      max_depth=15
+      min_samples_split=5
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 57: CRPS=0.0356  duration=70.6s  (train=0.0159 val=0.0258 gap=0.0098)
+      n_estimators=300
+      max_depth=30
+      min_samples_split=3
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 58: CRPS=0.0319  duration=68.9s  (train=0.0262 val=0.0290 gap=0.0028)
+      n_estimators=320
+      max_depth=18
+      min_samples_split=4
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 59: CRPS=0.0319  duration=42.7s  (train=0.0300 val=0.0309 gap=0.0009)
+      n_estimators=340
+      max_depth=16
+      min_samples_split=5
+      min_samples_leaf=4
+      max_features=log2
+
+  Trial 60: CRPS=0.0318  duration=61.9s  (train=0.0304 val=0.0311 gap=0.0007)
+      n_estimators=300
+      max_depth=15
+      min_samples_split=2
+      min_samples_leaf=3
+      max_features=0.8
+
+  Trial 61: CRPS=0.0316  duration=63.1s  (train=0.0291 val=0.0304 gap=0.0013)
+      n_estimators=300
+      max_depth=16
+      min_samples_split=4
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 62: CRPS=0.0319  duration=68.2s  (train=0.0262 val=0.0290 gap=0.0028)
+      n_estimators=320
+      max_depth=18
+      min_samples_split=4
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 63: CRPS=0.0316  duration=62.7s  (train=0.0291 val=0.0304 gap=0.0013)
+      n_estimators=300
+      max_depth=16
+      min_samples_split=5
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 64: CRPS=0.0317  duration=65.0s  (train=0.0304 val=0.0311 gap=0.0006)
+      n_estimators=320
+      max_depth=15
+      min_samples_split=3
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 65: CRPS=0.0319  duration=82.1s  (train=0.0261 val=0.0290 gap=0.0029)
+      n_estimators=300
+      max_depth=18
+      min_samples_split=4
+      min_samples_leaf=4
+      max_features=1.0
+
+  Trial 66: CRPS=0.0316  duration=66.2s  (train=0.0291 val=0.0304 gap=0.0012)
+      n_estimators=320
+      max_depth=16
+      min_samples_split=3
+      min_samples_leaf=4
+      max_features=0.8
+
+  Trial 67: CRPS=0.0320  duration=69.3s  (train=0.0248 val=0.0284 gap=0.0036)
+      n_estimators=320
+      max_depth=19
+      min_samples_split=3
+      min_samples_leaf=4
+      max_features=0.8
+
+======================================================================

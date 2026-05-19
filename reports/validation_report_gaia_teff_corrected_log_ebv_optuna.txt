@@ -1,55 +1,55 @@
 Validation Report: Gaia Teff (Corrected, Log, +EBV, Optuna)
 ================================================================================
 
-Model ID: rf_gaia_teff_corrected_log_ebv_optuna_20260401_201113
-Model File: /Users/wera/Max_astro/Slovakia/gaia_eb_rf_teff/models/rf_gaia_teff_corrected_log_ebv_optuna_20260401_201113.pkl
-Validation Date: 2026-04-01 22:14:04
+Model ID: rf_gaia_teff_corrected_log_ebv_optuna_20260417_130129
+Model File: /home/gabdeev/gaia_eb_rf_teff/models/rf_gaia_teff_corrected_log_ebv_optuna_20260417_130129.pkl
+Validation Date: 2026-04-17 13:03:55
 
 Test Set: 255,234 samples
 
 OVERALL PERFORMANCE:
-  MAE:  556.0772 K
-  RMSE: 1135.2113 K
-  R²:   0.6734
-  Mean Relative Error: 8.71%
+  MAE:  541.6779 K
+  RMSE: 1111.2213 K
+  R²:   0.6846
+  Mean Relative Error: 8.48%
 
 ACCURACY THRESHOLDS:
-  Within  5%: 48.0%
-  Within 10%: 70.3%
-  Within 20%: 89.3%
+  Within  5%: 49.5%
+  Within 10%: 71.6%
+  Within 20%: 89.6%
 
 PERFORMANCE BY TEMPERATURE RANGE:
 
-  [0.00 - 4000.00] K (n=26,791):
-    MAE:  332.4140 K
-    RMSE: 553.9210 K
-    R²:   -12.8586
+  [0.00 - 4000.00] K (n=26,825):
+    MAE:  312.7556 K
+    RMSE: 537.5673 K
+    R²:   -12.1253
 
-  [4000.00 - 5000.00] K (n=101,104):
-    MAE:  291.0959 K
-    RMSE: 446.2943 K
-    R²:   -1.5946
+  [4000.00 - 5000.00] K (n=101,056):
+    MAE:  283.1962 K
+    RMSE: 442.1816 K
+    R²:   -1.5420
 
-  [5000.00 - 6000.00] K (n=71,533):
-    MAE:  369.7243 K
-    RMSE: 497.8326 K
-    R²:   -2.1377
+  [5000.00 - 6000.00] K (n=71,439):
+    MAE:  368.1289 K
+    RMSE: 505.3044 K
+    R²:   -2.2237
 
-  [6000.00 - 8000.00] K (n=37,578):
-    MAE:  687.7774 K
-    RMSE: 929.2277 K
-    R²:   -1.6446
+  [6000.00 - 8000.00] K (n=37,679):
+    MAE:  670.5366 K
+    RMSE: 914.3846 K
+    R²:   -1.5539
 
-  [8000.00 - 50000.00] K (n=18,228):
-    MAE:  2814.3717 K
-    RMSE: 3706.2679 K
-    R²:   0.1046
+  [8000.00 - 50000.00] K (n=18,235):
+    MAE:  2724.5609 K
+    RMSE: 3612.0578 K
+    R²:   0.1384
 
 PROBABILISTIC METRICS (5-component GMM):
-  CRPS mean:   469.8 K
-  CRPS median: 201.0 K
-  PIT mean:    0.408 (ideal=0.500)
-  PIT std:     0.423 (ideal~0.289)
+  CRPS mean:   452.1 K
+  CRPS median: 191.1 K
+  PIT mean:    0.418 (ideal=0.500)
+  PIT std:     0.422 (ideal~0.289)
 
 VALIDATION PLOTS:
   Location: reports/figures/gaia_teff_corrected_log_ebv_optuna_validation/

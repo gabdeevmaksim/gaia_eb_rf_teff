@@ -645,6 +645,8 @@ class PrepareTrainTestFromConfigStep(PipelineStep):
         test_size = training_config.get('test_size', 0.2)
         random_state = training_config.get('random_state', 42)
         stratify_bins = training_config.get('stratify_target_bins', None)
+        stratify_hot_threshold = training_config.get('stratify_hot_threshold', 10000.0)
+        stratify_hot_as_one_stratum = training_config.get('stratify_hot_as_one_stratum', True)
 
         # Build stratification labels: Teff bins (optionally combined with categorical columns)
         stratify_labels = None
@@ -653,7 +655,28 @@ class PrepareTrainTestFromConfigStep(PipelineStep):
         if stratify_bins is not None and stratify_bins > 0:
             y_for_binning = context.get('y_original_train_full', y)
             try:
-                teff_bins = pd.qcut(y_for_binning, q=stratify_bins, labels=False, duplicates='drop')
+                if stratify_hot_as_one_stratum:
+                    hot_mask = y_for_binning > float(stratify_hot_threshold)
+                    cool = y_for_binning[~hot_mask]
+
+                    if cool.shape[0] == 0:
+                        teff_bins = pd.Series(
+                            data="hot",
+                            index=y_for_binning.index,
+                            dtype="object",
+                        )
+                    else:
+                        cool_bins = pd.qcut(cool, q=stratify_bins, labels=False, duplicates='drop')
+                        teff_bins = pd.Series(index=y_for_binning.index, dtype="object")
+                        teff_bins.loc[~hot_mask] = cool_bins.astype(str)
+                        teff_bins.loc[hot_mask] = "hot"
+
+                        self.logger.info(
+                            f"Stratification: forcing Teff > {float(stratify_hot_threshold):.0f} K "
+                            f"into one stratum ('hot') [{int(hot_mask.sum()):,} samples]"
+                        )
+                else:
+                    teff_bins = pd.qcut(y_for_binning, q=stratify_bins, labels=False, duplicates='drop')
             except Exception as e:
                 self.logger.warning(f"Could not create target bins: {e}; falling back to random split")
                 teff_bins = None
@@ -1852,9 +1875,10 @@ class EvaluateModelFromConfigStep(PipelineStep):
                 gaussian_mixture_crps,
                 gaussian_mixture_pit,
             )
-            val_config = model_config.get('validation', {})
+            model_config = context.get('model_config', {}) or {}
+            val_config = model_config.get('validation', {}) or {}
             gmm_select_k = val_config.get('gmm_select_k')  # None or "bic"
-            rs = context.get('model_config', {}).get('training', {}).get('random_state', 42)
+            rs = model_config.get('training', {}).get('random_state', 42)
 
             if gmm_select_k == 'bic':
                 k_max = int(val_config.get('gmm_k_max', 8))
