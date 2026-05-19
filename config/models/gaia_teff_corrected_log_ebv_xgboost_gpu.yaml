@@ -1,0 +1,84 @@
+model:
+  name: Gaia Teff (Corrected, Log, +EBV, XGBoost GPU)
+  id_prefix: xgb_gaia_teff_corrected_log_ebv_gpu
+  description: Temperature prediction using Gaia colors plus E(B-V) extinction
+    with polynomial Teff correction, log-transformed target, and XGBoost GPU training
+  backend: xgboost
+
+teff_correction:
+  enabled: true
+  target_column: teff_gaia
+  threshold: 10000
+  blend_width: 2000
+  coefficients_file: teff_correction_coeffs_deg2.pkl
+
+target_transform: log
+
+data:
+  source_file: eb_unified_photometry.parquet
+  source_format: parquet
+  source_location: raw
+  target: teff_gaia_corrected
+  features:
+  - g
+  - bp
+  - rp
+  - bp_rp
+  - g_bp
+  - g_rp
+  - ebv_sandf
+  id_column: source_id
+
+preprocessing:
+  missing_value: -999.0
+  drop_missing: true
+
+training:
+  test_size: 0.2
+  random_state: 42
+  stratify_target_bins: 10
+
+# Note: current pipeline's Optuna step optimizes sklearn RF hyperparameters.
+# Keep it disabled for XGBoost unless/until we extend Optuna for XGBoost.
+optuna_optimization:
+  enabled: false
+
+hyperparameters:
+  # XGBoost regressor hyperparameters
+  n_estimators: 2000
+  max_depth: 8
+  learning_rate: 0.03
+  subsample: 0.9
+  colsample_bytree: 0.9
+  min_child_weight: 1.0
+  reg_lambda: 1.0
+  reg_alpha: 0.0
+  gamma: 0.0
+  objective: reg:squarederror
+  random_state: 42
+  n_jobs: -1
+  # GPU settings (defaults in code are also GPU, but keep explicit here)
+  tree_method: gpu_hist
+  predictor: gpu_predictor
+
+feature_engineering:
+  enabled: false
+
+clustering:
+  enabled: false
+
+output:
+  save_model: true
+  save_predictions: true
+  save_test_predictions: true
+  models_dir: models
+  predictions_dir: data/predictions
+
+validation:
+  create_plots: true
+  n_temp_bins: 5
+  target_info:
+    name: Temperature
+    unit: K
+    short: Teff
+

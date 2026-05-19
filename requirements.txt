@@ -21,3 +21,4 @@ requests
 optuna
 python-dotenv
 ydata_profiling
+xgboost

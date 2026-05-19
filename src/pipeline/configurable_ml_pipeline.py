@@ -46,6 +46,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from .base import Pipeline, PipelineStep
 from ..features import engineer_all_features
 from ..config import get_config
+from ..ml import build_regressor, get_model_spec
 
 
 def _generate_model_signature(model_config: Dict[str, Any]) -> str:
@@ -72,6 +73,10 @@ def _generate_model_signature(model_config: Dict[str, Any]) -> str:
     data_config = model_config.get('data', {})
     signature_parts.append(f"source_file:{data_config.get('source_file', '')}")
     signature_parts.append(f"target:{data_config.get('target', '')}")
+
+    # Model backend (sklearn|xgboost|cuml) so caches don't cross-contaminate
+    model_block = model_config.get('model', {}) or {}
+    signature_parts.append(f"backend:{model_block.get('backend', 'sklearn')}")
     
     # Features (sorted for consistency)
     features = sorted(data_config.get('features', []))
@@ -1533,6 +1538,15 @@ class OptunaOptimizeHyperparametersStep(PipelineStep):
         X_train = context['X_train']
         y_train = context['y_train']
         sample_weights = context.get('sample_weights_train')
+
+        # Only supported for sklearn RF today (keeps backward compatibility).
+        backend = get_model_spec(model_config).backend
+        if backend != "sklearn":
+            self.logger.info(
+                f"Optuna optimization currently supported only for sklearn backend. "
+                f"Backend '{backend}' detected -> skipping optimization."
+            )
+            return context
         
         # Check if optimization is enabled
         optuna_config = model_config.get('optuna_optimization', {})
@@ -1686,43 +1700,48 @@ class TrainModelFromConfigStep(PipelineStep):
 
         # Get hyperparameters
         hyperparams = model_config.get('hyperparameters', {})
+        spec = get_model_spec(model_config)
+        model, model_params = build_regressor(model_config=model_config, hyperparameters=hyperparams)
 
-        # Handle max_features (can be string or number)
-        max_features = hyperparams.get('max_features', 'log2')
-        if isinstance(max_features, str) and max_features.isdigit():
-            max_features = int(max_features)
-
-        model_params = {
-            'n_estimators': hyperparams.get('n_estimators', 300),
-            'max_depth': hyperparams.get('max_depth', 20),
-            'min_samples_split': hyperparams.get('min_samples_split', 5),
-            'min_samples_leaf': hyperparams.get('min_samples_leaf', 4),
-            'max_features': max_features,
-            'random_state': hyperparams.get('random_state', 42),
-            'n_jobs': hyperparams.get('n_jobs', -1),
-            'verbose': 0
-        }
-
-        self.logger.info("Training Random Forest with parameters:")
+        self.logger.info(f"Training model backend: {spec.backend}")
+        self.logger.info("Training parameters:")
         for param, value in model_params.items():
-            if param != 'verbose':
+            if param != "verbose":
                 self.logger.info(f"  {param}: {value}")
-
-        # Create and train model
-        model = RandomForestRegressor(**model_params)
 
         # Use sample weights if available
         sample_weights = context.get('sample_weights_train')
         if sample_weights is not None:
             self.logger.info("Training with sample weights")
-            model.fit(X_train, y_train, sample_weight=sample_weights)
+
+        # cuML prefers GPU arrays; keep conversions minimal and only for cuML.
+        if spec.backend == "cuml":
+            try:
+                import cudf  # type: ignore
+                X_train_in = cudf.DataFrame.from_pandas(X_train)
+                y_train_in = cudf.Series(y_train)
+                w_in = cudf.Series(sample_weights) if sample_weights is not None else None
+            except Exception:
+                import cupy as cp  # type: ignore
+                X_train_in = cp.asarray(X_train.values)
+                y_train_in = cp.asarray(np.asarray(y_train))
+                w_in = cp.asarray(sample_weights) if sample_weights is not None else None
+
+            if w_in is not None:
+                model.fit(X_train_in, y_train_in, sample_weight=w_in)
+            else:
+                model.fit(X_train_in, y_train_in)
         else:
-            model.fit(X_train, y_train)
+            if sample_weights is not None:
+                model.fit(X_train, y_train, sample_weight=sample_weights)
+            else:
+                model.fit(X_train, y_train)
 
         self.logger.info("✓ Model trained successfully")
 
         context['model'] = model
         context['hyperparameters'] = model_params
+        context['model_backend'] = spec.backend
         return context
 
 
@@ -1738,15 +1757,35 @@ class EvaluateModelFromConfigStep(PipelineStep):
         X_test = context['X_test']
         y_train = context['y_train']
         y_test = context['y_test']
+        model_config = context['model_config']
+        backend = (context.get('model_backend') or get_model_spec(model_config).backend)
 
         # Make predictions
         y_pred_train = model.predict(X_train)
         y_pred_test = model.predict(X_test)
 
+        # Normalize possible GPU outputs (cupy/cudf) to numpy
+        try:
+            import cupy as cp  # type: ignore
+            if isinstance(y_pred_train, cp.ndarray):
+                y_pred_train = cp.asnumpy(y_pred_train)
+            if isinstance(y_pred_test, cp.ndarray):
+                y_pred_test = cp.asnumpy(y_pred_test)
+        except Exception:
+            pass
+        try:
+            import cudf  # type: ignore
+            if isinstance(y_pred_train, cudf.Series):
+                y_pred_train = y_pred_train.to_numpy()
+            if isinstance(y_pred_test, cudf.Series):
+                y_pred_test = y_pred_test.to_numpy()
+        except Exception:
+            pass
+
         # Per-tree predictions for test set (used for uncertainty + GMM)
         tree_preds_transformed = None
         y_pred_test_uncertainty = None
-        if hasattr(model, 'estimators_') and model.estimators_:
+        if backend == "sklearn" and hasattr(model, 'estimators_') and model.estimators_:
             feature_cols = context['feature_cols']
             X_test_np = (
                 X_test[feature_cols].to_numpy()
@@ -1756,6 +1795,11 @@ class EvaluateModelFromConfigStep(PipelineStep):
             tree_preds_transformed = np.array(
                 [est.predict(X_test_np) for est in model.estimators_]
             )  # shape (n_trees, n_samples)
+        elif backend != "sklearn":
+            self.logger.info(
+                f"Backend '{backend}' does not expose per-tree predictions; "
+                "skipping tree-spread uncertainty and GMM-based CRPS/PIT."
+            )
 
         # Inverse transform predictions if target was transformed
         target_transform = context.get('target_transform', 'none')
@@ -1885,22 +1929,44 @@ class EvaluateModelFromConfigStep(PipelineStep):
         self.logger.info(f"    Within 10%: {test_metrics['within_10_percent']:.1f}%")
 
         # Feature importance
-        feature_importance = dict(zip(
-            context['feature_cols'],
-            model.feature_importances_
-        ))
+        feature_importance = {}
+        if backend == "sklearn" and hasattr(model, "feature_importances_"):
+            feature_importance = dict(zip(
+                context['feature_cols'],
+                model.feature_importances_
+            ))
+        elif backend == "xgboost":
+            try:
+                booster = model.get_booster()
+                # 'gain' is a good default; keys are like "f0", "f1" if trained on numpy
+                score = booster.get_score(importance_type="gain")
+                # Try mapping f{idx} -> column name where possible
+                feat_cols = list(context['feature_cols'])
+                for k, v in score.items():
+                    if k.startswith("f") and k[1:].isdigit():
+                        idx = int(k[1:])
+                        if 0 <= idx < len(feat_cols):
+                            feature_importance[feat_cols[idx]] = float(v)
+                        else:
+                            feature_importance[k] = float(v)
+                    else:
+                        feature_importance[k] = float(v)
+            except Exception:
+                feature_importance = {}
 
         # Sort by importance
-        top_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)[:10]
-        self.logger.info("Top 10 Features by Importance:")
-        for feature, importance in top_features:
-            self.logger.info(f"    {feature}: {importance:.4f}")
+        if feature_importance:
+            top_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)[:10]
+            self.logger.info("Top 10 Features by Importance:")
+            for feature, importance in top_features:
+                self.logger.info(f"    {feature}: {importance:.4f}")
 
         context['y_pred_train'] = y_pred_train
         context['y_pred_test'] = y_pred_test
         context['train_metrics'] = train_metrics
         context['test_metrics'] = test_metrics
         context['feature_importance'] = feature_importance
+        context['model_backend'] = backend
 
         return context
 
@@ -1945,6 +2011,7 @@ class SaveModelFromConfigStep(PipelineStep):
         feature_cols = context['feature_cols']
         feature_importance = context['feature_importance']
         config = context['config']
+        backend = context.get('model_backend') or get_model_spec(model_config).backend
 
         # Create model ID with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1964,7 +2031,8 @@ class SaveModelFromConfigStep(PipelineStep):
             'timestamp': timestamp,
             'model_name': model_config['model']['name'],
             'description': model_config['model']['description'],
-            'model_type': 'RandomForestRegressor',
+            'model_type': 'RandomForestRegressor' if backend == 'sklearn' else backend,
+            'backend': backend,
             'n_features': len(feature_cols),
             'features': feature_cols,
             'data_source': model_config['data']['source_file'],

@@ -1,0 +1,23 @@
+## Optional GPU requirements (server)
+#
+# This project’s default `requirements.txt` is CPU-friendly.
+# GPU acceleration depends on your CUDA driver/toolkit and is best installed
+# on the server using conda/mamba so versions match your CUDA runtime.
+#
+# Recommended GPU stack:
+# - RAPIDS cuML for GPU RandomForestRegressor
+# - cuDF / CuPy for GPU arrays/dataframes
+#
+# XGBoost GPU is installed via pip in `requirements.txt` (it can use GPU if built with CUDA).
+#
+# Example (adjust CUDA version to your server, e.g. cuda12):
+#   mamba create -n gaia-eb-gpu -c rapidsai -c conda-forge -c nvidia \\
+#     rapids=24.* python=3.11 cuda-version=12.*
+#
+# Then install this repo’s CPU requirements:
+#   pip install -r requirements.txt
+#
+# Notes:
+# - cuML API surface differs from sklearn; we only use it when available.
+# - Do not add RAPIDS packages to `requirements.txt` to avoid breaking local installs.
+
